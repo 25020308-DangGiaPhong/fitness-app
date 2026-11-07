@@ -49,3 +49,7 @@ Code Reviewer đã đọc bản đề xuất sau khi soạn; ba findings đượ
 ## Sửa Expo Go mismatch trên iPhone
 
 Ảnh người dùng xác nhận Expo Go SDK58 còn project SDK57. Nâng đồng bộ Expo và native dependency theo bundledNativeModules SDK58; giữ app shell và cấu hình agents. Nguồn sự thật compatibility là Expo Go thực tế trên máy; kiểm tra Simulator SDK57 trước đây không thay cho iPhone thật.
+
+## Điều chỉnh ưu tiên — core trước (2026-11-07)
+
+Người dùng đã cho phép chủ động triển khai demo, sau đó thu gọn ngay về vòng tập khép kín: chọn bài → phiên tập/hiệp/nghỉ/pause/resume → hoàn tất → kết quả → lịch sử và Progress local. Hoãn XP/leaderboard, sự kiện, Coach và camera. Giữ hai tab Train/Progress và module hiện có. Dùng expo-file-system tương thích SDK58 cho snapshot local thay vì thêm backend. Không đổi cấu hình agents/global.
