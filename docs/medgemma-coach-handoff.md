@@ -2,6 +2,8 @@
 
 Ngày soạn: 08/11/2026. Đối tượng nhận: người triển khai AI/backend và người tích hợp React Native.
 
+**Thứ tự thực hiện:** trước hết tạo và nghiệm thu tab AI Coach theo [ai-coach-tab-handoff.md](ai-coach-tab-handoff.md). Sau đó dùng tài liệu này để xây backend và thay điểm nối preview bằng API thật. Chưa coi giao diện preview là tích hợp MedGemma hoàn tất.
+
 ## 1. Phạm vi và trạng thái
 
 Tài liệu đóng gói hướng dẫn để phát triển trên máy/server khác và tích hợp về Fitness App. Đây là thiết kế đề xuất, chưa phải chức năng đã triển khai hoặc kết quả kiểm thử. Việc gửi tài liệu không tự cấp quyền mua dịch vụ, upload dữ liệu sức khỏe hoặc mở tính năng cho người dùng thật.
