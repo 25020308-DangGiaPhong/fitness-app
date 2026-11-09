@@ -2,6 +2,8 @@
 
 React Native + Expo SDK58 + TypeScript. UI English, neutral/coral. Scope hiện tại: Train → chọn bài mẫu → phiên tập (sets, nghỉ, pause/resume/cancel) → kết quả → Progress/lịch sử local. Không có backend, AI, camera, sự kiện hoặc leaderboard trong lát cắt này.
 
+Có thêm tab **AI Coach** ở chế độ UI preview, chưa kết nối MedGemma hoặc API. Thứ tự tab: Train → AI Coach → Progress. Không có tư vấn y tế cá nhân hóa.
+
 ## Mở trên iPhone
 
 ```sh
@@ -39,3 +41,15 @@ Bài tập/hướng dẫn là nội dung mẫu; set hoàn thành do người dù
 `app/` chỉ ghép screen/điều hướng. `exercise-catalog` sở hữu catalog mẫu; `workout-sessions` sở hữu snapshot versioned và lifecycle; `progress` đọc cùng snapshot, không lưu history riêng. `src/ui` chỉ tokens và primitives. Các module nhập nhau qua public `index`.
 
 Chi tiết trạng thái và giới hạn kiểm chứng: [docs/progress.md](docs/progress.md).
+
+## Thử AI Coach preview
+
+1. Mở AI Coach, kiểm tra nhãn `Preview — not connected`. Nhập tự do chỉ nhận thông báo mẫu, không được phân tích triệu chứng hay gửi lên dịch vụ AI.
+2. Chọn `Try sample conversation` → chọn Knee/Ankle/Calf/Not sure → Confirm answer. Đây là câu hỏi minh họa, chưa phải protocol y khoa.
+3. Mở `Preview scenarios` để thử bốn loại response, Invalid Exercise ID, Error + Retry, Wrong Request ID và Late Stale Response. Chuyển scenario xóa draft/transcript hiện tại.
+4. Với suggestions_available, chọn View exercise để mở bài thật trong catalog. Đây là card mẫu, không phải khuyến nghị cho triệu chứng. Start/Resume vẫn theo luồng phiên tập hiện có.
+5. New chat yêu cầu xác nhận khi có nội dung; đóng app/reload mất chat. State chat chỉ ở RAM, không nằm trong snapshot workout hoặc Progress.
+
+`src/modules/ai-coach/preview.ts` cung cấp `requestGuidance` và resolve bài qua public API catalog. Chưa có HTTP adapter, auth hoặc consent server. Bước tiếp theo theo [hướng dẫn MedGemma](docs/medgemma-coach-handoff.md), sau khi nội dung/policy chuyên môn đã được duyệt.
+
+Test Coach chạy callback thật với native/hooks giả lập và request có thể điều khiển: gửi/xác nhận/thử lại liên tiếp, reset khi request cũ còn chờ, phản hồi/lỗi cũ không tác động lượt mới và resolve toàn catalog. Các test này không xác nhận layout, bàn phím hoặc screen reader trên thiết bị.

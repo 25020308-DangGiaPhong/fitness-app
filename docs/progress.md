@@ -61,3 +61,13 @@ Simulator iPhone17 Pro/iOS26.2 chỉ có Expo Go57.0.9, đã mở và quan sát 
 - 8 domain/persistence tests PASS: reentry/reopen JSON, pause/rest, complete lặp, cancel, schema hỏng, failed-write/retry, concurrent20 starts/finishes, regression pause trước hiệp đầu.
 - Typecheck/lint PASS trên Node26.7.0. Export iOS/Android PASS; chưa phải IPA/APK hoặc device smoke. Node test có warning MODULE_TYPELESS_PACKAGE_JSON, không ảnh hưởng kết quả.
 - Chưa kiểm chứng runtime SDK58 trên iPhone/Android, đóng app thật trong lúc ghi, font scale lớn nhất/landscape/VoiceOver. Giới hạn Simulator ExpoGo57 nêu trên còn nguyên. Core là local self-report, không XP/AI/camera/sự kiện/leaderboard/backend.
+
+## AI Coach preview — sửa review 2026-11-08
+
+- Tab AI Coach nằm giữa Train và Progress, route mỏng, module sở hữu transcript/draft/intake trong RAM. Không gọi mạng/model hoặc ghi chat vào workout snapshot.
+- Sửa gửi/xác nhận/retry liên tiếp: kiểm tra khóa đồng bộ trước khi đổi revision/thêm message. Request cũ sau reset không chèn phản hồi/lỗi hoặc mở khóa request mới; dọn callback khi unmount.
+- Resolver dùng getExercise từ public API catalog thay danh sách squat viết cứng; ID không tồn tại không được điều hướng. Chuẩn hóa key fixture invalid_exercise_id.
+- Coach dùng color/typography/spacing/radius tokens của app; vùng chạm tối thiểu48, feedback nhấn và reduced-motion cho cuộn. Scenario mới xóa draft để tách dữ liệu mẫu.
+- README có walkthrough preview và điểm nối MedGemma; chưa có HTTP adapter/consent/auth server. DTO preview chưa phải contract backend hoàn chỉnh; phải map/validate theo hướng dẫn MedGemma ở bước sau.
+- Kiểm chứng trên Node26.7.0, bộ dependency theo package-lock hiện tại: lint/typecheck PASS, 14 tests PASS (8 workout + 6 Coach). Test Coach transpile mã thật rồi chạy callback với hooks/native giả lập; không phải native rendering/E2E. Export bundle iOS/Android PASS ra thư mục tạm; không phải IPA/APK. Warning MODULE_TYPELESS_PACKAGE_JSON của test workout còn nguyên, không làm test fail.
+- Chưa kiểm chứng render/keyboard/tab-back-state/font lớn/VoiceOver/TalkBack trên thiết bị của project. Simulator đang mở app khác (Forma Coach), không dùng làm bằng chứng runtime cho source này. Chưa chạy MedGemma hoặc đánh giá chuyên môn.
