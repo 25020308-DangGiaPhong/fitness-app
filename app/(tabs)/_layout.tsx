@@ -69,6 +69,21 @@ export default function TabLayout() {
 
       {/* PROGRESS TAB */}
       <Tabs.Screen
+        name="ai-coach"
+        options={{
+          title: 'AI Coach',
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={size}
+              color={focused ? colors.action : colors.textSecondary}
+              accessible={false}
+              importantForAccessibility="no"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="progress"
         options={{
           title: 'Progress',
