@@ -72,6 +72,7 @@ export default function TabLayout() {
         name="ai-coach"
         options={{
           title: 'AI Coach',
+          tabBarHideOnKeyboard: true,
           tabBarIcon: ({ size, focused }) => (
             <Ionicons
               name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}

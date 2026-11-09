@@ -36,11 +36,10 @@ const preview = load('src/modules/ai-coach/preview.ts', (name) => {
 
 function createScreen(service = preview.requestGuidance) {
   const slots = [];
-  const cleanups = [];
   const requests = [];
   let cursor = 0;
   let tree;
-  let alertButtons;
+  const opened = [];
   const react = {
     createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
     useState(initial) {
@@ -54,14 +53,7 @@ function createScreen(service = preview.requestGuidance) {
       const index = cursor++;
       return slots[index] ??= { current: initial };
     },
-    useCallback: (callback) => callback,
-    useEffect(effect) {
-      const index = cursor++;
-      if (!(index in slots)) {
-        slots[index] = true;
-        cleanups.push(effect());
-      }
-    },
+
   };
   const native = Object.fromEntries([
     'FlatList', 'KeyboardAvoidingView', 'Pressable', 'ScrollView', 'Text', 'TextInput', 'View',
@@ -69,10 +61,12 @@ function createScreen(service = preview.requestGuidance) {
   Object.assign(native, {
     Platform: { OS: 'ios' },
     StyleSheet: { create: (styles) => styles },
-    Alert: { alert: (_title, _message, buttons) => { alertButtons = buttons; } },
+    Keyboard: { dismiss() {} },
   });
   const screen = load('src/modules/ai-coach/ui/CoachScreen.tsx', (name) => {
     if (name === 'react') return react;
+    if (name === '@expo/vector-icons/Ionicons') return 'Ionicons';
+    if (name === '@/modules/exercise-catalog') return catalog;
     if (name === 'react-native') return native;
     if (name === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
     if (name === '@/ui') return { ...tokens, useReducedMotion: () => true };
@@ -85,7 +79,7 @@ function createScreen(service = preview.requestGuidance) {
   });
   function render() {
     cursor = 0;
-    tree = screen.CoachScreen({ onOpenExerciseDetail: () => {} });
+    tree = screen.CoachScreen({ onOpenExerciseDetail: (id) => opened.push(id) });
   }
   function* walk(node) {
     if (Array.isArray(node)) { for (const child of node) yield* walk(child); return; }
@@ -102,99 +96,60 @@ function createScreen(service = preview.requestGuidance) {
     return element.props;
   }
   const label = (text) => find((node) => node.props.accessibilityLabel === text);
-  const scenario = (text) => find((node) => node.type === 'Pressable' &&
-    node.props.children.some((child) => child?.props?.children?.includes(text)));
-  function type(text) { label('Describe your concern').onChangeText(text); render(); }
-  function reset() {
-    label('Start a new chat').onPress();
-    alertButtons?.find((button) => button.text === 'Confirm')?.onPress();
+  function type(text) { label('Your message').onChangeText(text); render(); }
+  function newChat() { label('Start a new chat').onPress(); render(); }
+  function history() {
+    find((node) => node.props.accessibilityState?.expanded !== undefined).onPress();
+    render();
+  }
+  function openChat(title) {
+    find((node) => node.props.accessibilityState?.selected !== undefined &&
+      node.props.children[0]?.props.children.includes(title)).onPress();
     render();
   }
   render();
   return {
-    render, label, scenario, type, reset, requests,
-    messages: () => [...walk(tree)].find((node) => node.type === 'FlatList')?.props.data ?? [],
-    unmount: () => cleanups.forEach((cleanup) => cleanup?.()),
+    render, label, type, newChat, history, openChat, requests, opened,
+    messages: () => [...walk(tree)].find((node) => node.type === 'FlatList').props.data,
   };
 }
 
-test('Coach same-tick double Send produces one turn and allows the next turn', async () => {
+test('Coach sends one turn and offers three working catalog links', async () => {
   const ui = createScreen();
-  try {
-    ui.type('Preview message');
-    const send = ui.label('Send message').onPress;
-    send(); send();
-    await flush(); ui.render();
-    assert.equal(ui.requests.length, 1);
-    assert.equal(ui.messages().filter((message) => message.role === 'user').length, 1);
-    assert.equal(ui.messages().filter((message) => message.role === 'coach').length, 1);
-    ui.type('Next message');
-    assert.equal(ui.label('Send message').disabled, false);
-    ui.label('Send message').onPress();
-    await flush(); ui.render();
-    assert.equal(ui.messages().length, 4);
-  } finally { ui.unmount(); }
+  ui.type('Show me something to try');
+  const send = ui.label('Send message').onPress;
+  send(); send();
+  await flush(); ui.render();
+
+  assert.equal(ui.requests.length, 1);
+  assert.equal(ui.messages().filter(({ role }) => role === 'user').length, 1);
+  const suggestions = ui.messages().at(-1).suggestions;
+  assert.equal(new Set(suggestions.map(({ exerciseId }) => exerciseId)).size, 3);
+  for (const { exerciseId } of suggestions) {
+    const exercise = catalog.getExercise(exerciseId);
+    assert.ok(exercise);
+    ui.label(`View ${exercise.name}`).onPress();
+    assert.equal(ui.opened.at(-1), exerciseId);
+  }
+  ui.type('Next message');
+  assert.equal(ui.label('Send message').disabled, false);
 });
 
-test('Coach double Confirm records an answer only once', async () => {
-  const ui = createScreen();
-  try {
-    ui.label('Try sample conversation').onPress();
-    await flush(); ui.render();
-    ui.label('Answer option Not sure').onPress(); ui.render();
-    const confirm = ui.label('Confirm selected answer').onPress;
-    confirm(); confirm();
-    await flush(); ui.render();
-    assert.equal(ui.requests.length, 2);
-    assert.equal(ui.requests[1].answers.q_leg_location, 'not_sure');
-    assert.equal(ui.messages().filter((message) => message.content === 'Not sure').length, 1);
-    assert.equal(ui.messages().length, 4);
-  } finally { ui.unmount(); }
-});
-
-for (const outcome of ['resolve', 'reject']) {
-  test(`Coach ignores old ${outcome} after reset without unlocking a pending new turn`, async () => {
-    const pending = [];
-    const ui = createScreen((request) => new Promise((resolve, reject) => {
-      pending.push({ request, resolve, reject });
-    }));
-    try {
-      ui.type('Old message'); ui.label('Send message').onPress(); ui.render();
-      ui.reset();
-      ui.type('New message'); ui.label('Send message').onPress(); ui.render();
-      if (outcome === 'resolve') pending[0].resolve(await preview.requestGuidance(pending[0].request));
-      else pending[0].reject(new Error('Old failure'));
-      await flush(); ui.render();
-      assert.equal(ui.messages().length, 1);
-      assert.equal(ui.messages()[0].content, 'New message');
-      assert.equal(ui.label('Send message').disabled, true);
-      // Call despite the disabled native control to check the synchronous guard.
-      ui.label('Send message').onPress();
-      assert.equal(ui.requests.length, 2);
-      pending[1].resolve(await preview.requestGuidance(pending[1].request));
-      await flush(); ui.render();
-      assert.equal(ui.messages().length, 2);
-      ui.type('Ready again');
-      assert.equal(ui.label('Send message').disabled, false);
-    } finally { ui.unmount(); }
-  });
-}
-
-test('Coach preview error retries once even with same-tick double Retry', async () => {
-  const ui = createScreen();
-  try {
-    ui.label('Toggle preview scenarios panel').onPress(); ui.render();
-    ui.scenario('Error + Retry').onPress();
-    await flush(); ui.render();
-    ui.type('Draft to preserve');
-    const retry = ui.label('Retry failed request').onPress;
-    retry(); retry();
-    await flush(); ui.render();
-    assert.equal(ui.requests.length, 2);
-    assert.equal(ui.messages().length, 1);
-    assert.equal(ui.messages()[0].role, 'coach');
-    assert.equal(ui.label('Describe your concern').value, 'Draft to preserve');
-  } finally { ui.unmount(); }
+test('Chat history restores the right thread even if its reply arrived in another chat', async () => {
+  let complete;
+  const ui = createScreen((request) => new Promise((resolve) => {
+    complete = async () => resolve(await preview.requestGuidance(request));
+  }));
+  ui.type('First conversation');
+  ui.label('Send message').onPress(); ui.render();
+  ui.newChat();
+  await complete();
+  await flush(); ui.render();
+  assert.equal(ui.messages().length, 1);
+  ui.history();
+  ui.openChat('First conversation');
+  assert.equal(ui.messages()[1].content, 'First conversation');
+  assert.equal(ui.messages()[2].suggestions.length, 3);
 });
 
 test('Coach resolves every real catalog exercise and rejects unknown/prototype IDs', () => {

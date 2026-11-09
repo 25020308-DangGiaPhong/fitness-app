@@ -1,4 +1,4 @@
-import { getExercise } from '@/modules/exercise-catalog';
+import { exercises, getExercise } from '@/modules/exercise-catalog';
 
 import {
   GuidanceRequest,
@@ -140,9 +140,11 @@ export async function requestGuidance(
     default:
       return {
         ...base,
-        status: 'review_required',
-        message:
-          'Preview only. AI responses are not connected yet. Use the sample conversation to explore the interface.',
+        status: 'suggestions_available',
+        message: 'Here are three exercises to explore in Train.',
+        suggestions: exercises
+          .filter(({ id }) => ['shoulder-roll', 'standing-march', 'wall-push-up'].includes(id))
+          .map(({ id }) => ({ exerciseId: id, note: '' })),
       };
   }
 }

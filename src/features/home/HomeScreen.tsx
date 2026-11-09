@@ -205,7 +205,7 @@ export default function HomeScreen({
 
         <View style={styles.greetingBlock}>
           <Text style={[styles.greeting, { color: colors.text }]}>Hi, {displayName}!</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>Let's start a workout.</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>Let&apos;s start a workout.</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -322,7 +322,7 @@ export default function HomeScreen({
         </View>
 
         <View style={[styles.card, styles.activityCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Activity</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today&apos;s Activity</Text>
           <View style={styles.ringWrap}>
             <Svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}>
               <Circle

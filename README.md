@@ -14,6 +14,8 @@ npm start -- --clear
 
 Dùng Node24.22.2 theo `.nvmrc` (Node26.7.0 cũng đáp ứng engines). Máy tính và điện thoại cùng Wi-Fi. Mở Expo Go hỗ trợ **SDK58**, quét QR mới. Giữ Metro chạy; cho phép Local Network nếu iOS hỏi. Không cần API key hoặc Apple Developer trả phí. Nếu port8081 đã có Metro, dừng terminal cũ bằng Ctrl+C trước khi chạy lại.
 
+Sau khi pull thay đổi có cập nhật `package-lock.json`, dừng Metro rồi chạy `npm ci` trước khi mở app lại. Trên iOS Simulator, dùng `npm run ios -- --clear`.
+
 Dữ liệu chỉ lưu trong vùng dữ liệu của project trên máy bằng `expo-file-system`. Xóa Expo Go/xóa dữ liệu project có thể mất lịch sử. Chỉ hiện kết quả đã lưu sau khi ghi thành công; lỗi ghi có thể thử lại. Không hứa cold-start offline bằng Expo Go: cần Metro để tải bundle.
 
 ## Kiểm tra
@@ -44,12 +46,10 @@ Chi tiết trạng thái và giới hạn kiểm chứng: [docs/progress.md](doc
 
 ## Thử AI Coach preview
 
-1. Mở AI Coach, kiểm tra nhãn `Preview — not connected`. Nhập tự do chỉ nhận thông báo mẫu, không được phân tích triệu chứng hay gửi lên dịch vụ AI.
-2. Chọn `Try sample conversation` → chọn Knee/Ankle/Calf/Not sure → Confirm answer. Đây là câu hỏi minh họa, chưa phải protocol y khoa.
-3. Mở `Preview scenarios` để thử bốn loại response, Invalid Exercise ID, Error + Retry, Wrong Request ID và Late Stale Response. Chuyển scenario xóa draft/transcript hiện tại.
-4. Với suggestions_available, chọn View exercise để mở bài thật trong catalog. Đây là card mẫu, không phải khuyến nghị cho triệu chứng. Start/Resume vẫn theo luồng phiên tập hiện có.
-5. New chat yêu cầu xác nhận khi có nội dung; đóng app/reload mất chat. State chat chỉ ở RAM, không nằm trong snapshot workout hoặc Progress.
+1. Mở **AI Coach** và gửi một tin nhắn. Bản demo trả cùng ba bài từ Train, không phân tích nội dung hoặc gọi AI.
+2. Chạm một bài để mở đúng màn hướng dẫn như khi đi từ Train. Dùng Back để về cuộc chat; Start/Resume dùng luồng tập hiện có.
+3. Chạm biểu tượng soạn tin để mở chat mới; mở **Chat history** để quay lại chat trước. Lịch sử chỉ ở RAM và mất khi đóng hẳn hoặc reload app.
 
-`src/modules/ai-coach/preview.ts` cung cấp `requestGuidance` và resolve bài qua public API catalog. Chưa có HTTP adapter, auth hoặc consent server. Bước tiếp theo theo [hướng dẫn MedGemma](docs/medgemma-coach-handoff.md), sau khi nội dung/policy chuyên môn đã được duyệt.
+Coach sở hữu transcript/draft; Train sở hữu catalog. Chat không ghi vào snapshot workout hay Progress. `requestGuidance` vẫn là điểm nối preview; các scenario kỹ thuật không còn trên giao diện. Chưa có HTTP adapter, auth hoặc consent server. Xem [hướng dẫn MedGemma](docs/medgemma-coach-handoff.md) cho định hướng tích hợp sau khi nội dung/policy chuyên môn đã được duyệt.
 
-Test Coach chạy callback thật với native/hooks giả lập và request có thể điều khiển: gửi/xác nhận/thử lại liên tiếp, reset khi request cũ còn chờ, phản hồi/lỗi cũ không tác động lượt mới và resolve toàn catalog. Các test này không xác nhận layout, bàn phím hoặc screen reader trên thiết bị.
+Test Coach kiểm tra gửi trùng, mở đúng bài qua callback và khôi phục đúng cuộc chat khi phản hồi đến sau khi chuyển chat. Các test này không xác nhận render, điều hướng native, bàn phím hoặc screen reader trên thiết bị.
