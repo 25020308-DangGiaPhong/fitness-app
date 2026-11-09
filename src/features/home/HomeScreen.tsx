@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
   useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -194,12 +195,11 @@ export default function HomeScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          {/* Empty placeholder: add your app logo here later. */}
-          <View
-            style={[
-              styles.logoPlaceholder,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-            ]}
+          <Image
+            source={require('../../../assets/images/fitness-app-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityLabel="Fitness App Logo"
           />
         </View>
 
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36, gap: 18 },
   headerRow: { minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  logoPlaceholder: { width: 58, height: 58, borderRadius: 16, borderWidth: 1.5, borderStyle: "dashed" },
+  logo: { width: 64, height: 64, borderRadius: 16 },
   greetingBlock: { gap: 5, paddingTop: 2, paddingBottom: 2 },
   greeting: { fontSize: 29, fontWeight: "800", letterSpacing: -0.7 },
   subtitle: { fontSize: 16, fontWeight: "500" },
