@@ -47,10 +47,12 @@ Chi tiết trạng thái và giới hạn kiểm chứng: [docs/progress.md](doc
 ## Thử AI Coach
 
 1. Để bật live AI, tạo `.env.local` ở root và thêm `GROQ_API_KEY` từ tài khoản Groq. Khởi động lại Metro. Key là biến server, còn `EXPO_PUBLIC_COACH_ORIGIN` chỉ dùng nếu cần chỉ định URL server khác. Demo dùng mạng nội bộ tin cậy. Giữ endpoint dev trong LAN.
-2. Mở **AI Coach** và gửi câu mẫu `Mình bị mỏi cổ`. Chọn **Gentle movement → Seated** để xem **Shoulder Rolls**, một bài vận động vai và lưng trên trong Train. Thử lại với **Pain or recent injury** và **Not sure** để kiểm tra Coach dừng ở bước đó.
+2. Mở **AI Coach** và gửi câu mẫu `Tôi bị mỏi hông`. Chọn **Gentle movement → Seated** để xem **Seated Hip March** trong Train. Với `Mình bị mỏi cổ`, luồng tương tự mở **Chin Tucks**. Thử lại với **Pain or recent injury** và **Not sure** để kiểm tra Coach dừng ở bước đó.
 3. Thử câu wellness tự do như `Mình có 5 phút ở văn phòng, muốn vận động vai khi đứng, không dụng cụ`. Khi Groq khả dụng, Coach chọn từ catalog. Khi thiếu key, quá thời gian chờ hoặc mất kết nối, Coach báo AI tạm gián đoạn và luồng chọn nhanh vẫn hoạt động sau khi app đã mở.
 4. Chạm thẻ bài để mở Train, rồi Back để về chat. Lịch sử chat chỉ ở RAM và mất khi đóng hẳn hoặc reload app.
 
-Coach sở hữu transcript và request/response của `POST /api/coach`. Train sở hữu catalog và hướng dẫn bài. Request tự do được gửi tới Groq để chọn từ danh sách ID giới hạn. Luồng xác nhận cho câu “mỏi cổ” chạy local và chỉ gửi lựa chọn tư thế khi cần chọn bài. Dùng câu mẫu và dữ liệu giả lập trong demo dành cho người lớn. Endpoint demo chưa có xác thực hoặc giới hạn lượt gọi.
+Coach sở hữu transcript và request/response của `POST /api/coach`. Train sở hữu catalog và hướng dẫn bài. Các yêu cầu tự do ngoài mẫu đơn giản được gửi tới Groq để chọn từ danh sách ID giới hạn. Luồng căng mỏi xác nhận tại máy rồi dùng cả vùng và tư thế đã chọn để lọc catalog, kể cả khi Groq gián đoạn. Dùng câu mẫu và dữ liệu giả lập trong demo dành cho người lớn. Endpoint demo chưa có xác thực hoặc giới hạn lượt gọi.
+
+Trong **Train → All** và **Mobility**, các bài mobility bao phủ cổ, vai, lưng trên, lưng dưới, cổ tay, ngực, core, hông, đầu gối, đùi sau, bắp chân và cổ chân. Coach dùng vùng tập, tư thế, dụng cụ và thời lượng từ cùng catalog.
 
 Test Coach dùng callback và fetch giả lập để kiểm tra gửi trùng, đổi chat khi đang đợi, nhánh dừng, offline và kiểm tra ID. Cần chạy lại walkthrough bằng Expo Go với key thật để xác nhận Groq và hành vi trên điện thoại.

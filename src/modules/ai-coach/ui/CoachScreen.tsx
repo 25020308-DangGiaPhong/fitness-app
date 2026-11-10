@@ -19,7 +19,7 @@ import { colors, radii, spacing, typography, useReducedMotion } from '@/ui';
 
 import { requestMobility } from '../client';
 import { MAX_CONCERN_LENGTH } from '../model';
-import type { CoachReply, CoachStep, MobilityRequest, Posture } from '../mobility';
+import { demoCandidates, findMobilityArea, textBoundary, type CoachReply, type CoachStep, type MobilityRequest, type Posture } from '../mobility';
 
 export interface CoachScreenProps {
   onOpenExerciseDetail: (exerciseId: string) => void;
@@ -39,9 +39,11 @@ const welcome: Message = {
 
 const replyText: Record<CoachStep, string> = {
   confirm: 'Are you looking for gentle movement, or is this about pain or a recent injury?',
-  posture: 'Would you like gentle upper-body movement while seated or standing?',
+  posture: 'Which position works for you?',
+  area_needed: 'Where do you feel tight or tired? For example, your hips, shoulders, or lower back.',
   stop: 'I’ll pause exercise suggestions here. If you need help with pain or an injury, a healthcare professional can guide you.',
-  clarify: 'I couldn’t match that request to a demo exercise. Tell me what area you want to move and whether you prefer to sit or stand.',
+  clarify: 'What kind of movement would you like? For example, ask for seated knee mobility or a lower-back stretch.',
+  no_match: 'There’s no exercise in the demo catalog that matches those preferences.',
   unavailable: 'AI chat is unavailable. You can still try the guided upper-body options below.',
   suggest: 'Here’s a mobility exercise from Train.',
 };
@@ -53,7 +55,9 @@ const quickOptions: Record<QuickOption, string> = {
   unsure: 'Not sure',
   seated: 'Seated',
   standing: 'Standing',
+  floor: 'On the floor',
 };
+const postureOptions: Posture[] = ['seated', 'standing', 'floor'];
 
 export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
   const reduceMotion = useReducedMotion();
@@ -99,6 +103,8 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
   async function send(option?: QuickOption) {
     const content = option ? quickOptions[option] : draft.trim();
     if (!content || sending.current) return;
+    const previous = messages.at(-1);
+    const previousReply = previous?.role === 'coach' ? previous.reply : undefined;
     sending.current = true;
     scrollOnChange.current = true;
     setPending(true);
@@ -112,12 +118,18 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
       let reply: CoachReply;
       let offline = false;
       if (option === 'gentle') {
-        reply = { step: 'posture' };
+        reply = { step: 'posture', area: previousReply?.step === 'confirm' ? previousReply.area : 'shoulders' };
       } else if (option === 'pain' || option === 'unsure') {
         reply = { step: 'stop' };
       } else {
-        const request: MobilityRequest = option ? { posture: option } : { text: content };
-        ({ reply, offline } = await requestMobility(request));
+        const area = !option && previousReply?.step === 'area_needed' ? findMobilityArea(content) : undefined;
+        if (area) {
+          reply = textBoundary(content) ?? { step: 'confirm', area };
+        } else {
+          const request: MobilityRequest = option && previousReply?.step === 'posture'
+            ? { posture: option, area: previousReply.area } : { text: content };
+          ({ reply, offline } = await requestMobility(request));
+        }
       }
       const message = offline && reply.step === 'suggest'
         ? 'AI chat is unavailable. Here’s a mobility option selected on this device.'
@@ -135,7 +147,9 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
     const exercise = reply?.step === 'suggest' ? getExercise(reply.exerciseId) : undefined;
     const options: QuickOption[] = reply?.step === 'confirm' || reply?.step === 'unavailable'
       ? ['gentle', 'pain', 'unsure']
-      : reply?.step === 'posture' ? ['seated', 'standing'] : [];
+      : reply?.step === 'posture'
+        ? postureOptions.filter((position) => demoCandidates(reply.area, position).length > 0)
+        : [];
     return (
       <View style={[styles.message, isUser && styles.userMessage]}>
         {!isUser && <Text style={styles.sender}>AI Coach</Text>}

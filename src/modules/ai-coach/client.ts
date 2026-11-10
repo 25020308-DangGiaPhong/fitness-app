@@ -4,8 +4,8 @@ import { demoCandidates, readCoachReply, textBoundary, type CoachReply, type Mob
 
 export async function requestMobility(request: MobilityRequest): Promise<{ reply: CoachReply; offline: boolean }> {
   if ('text' in request) {
-    const step = textBoundary(request.text);
-    if (step) return { reply: { step }, offline: false };
+    const reply = textBoundary(request.text);
+    if (reply) return { reply, offline: false };
   }
 
   const controller = new AbortController();
@@ -25,9 +25,10 @@ export async function requestMobility(request: MobilityRequest): Promise<{ reply
     if (!reply) throw new Error('Invalid coach reply');
     return { reply, offline: false };
   } catch {
-    const candidate = 'posture' in request ? demoCandidates(request.posture)[0] : undefined;
+    const candidate = 'posture' in request ? demoCandidates(request.area, request.posture)[0] : undefined;
     return {
-      reply: candidate ? { step: 'suggest', exerciseId: candidate.id } : { step: 'unavailable' },
+      reply: candidate ? { step: 'suggest', exerciseId: candidate.id }
+        : { step: 'posture' in request ? 'no_match' : 'unavailable' },
       offline: true,
     };
   } finally {

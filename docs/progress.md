@@ -95,4 +95,8 @@ Simulator iPhone17 Pro/iOS26.2 chỉ có Expo Go57.0.9, đã mở và quan sát 
 - Coach sở hữu chat trong RAM và hợp đồng API. Expo dev server giữ key, gọi Groq GPT-OSS 20B và kiểm tra ID theo danh sách đủ điều kiện. Train sở hữu catalog. Khi không gọi được Groq, các lựa chọn nhanh vẫn chọn bài local và báo rõ nguồn kết quả.
 - Lint, typecheck, 15 tests và export bundle iOS/Android pass trên Node 26.7.0. Test callback và Groq giả lập chưa thay cho Expo Go trên điện thoại hoặc một lượt gọi Groq thật.
 - Kiểm tra HTTP qua Metro local: “mỏi cổ” trả confirm, “đau cổ” trả stop, thiếu key trả 503, tư thế sai trả 400.
+- Sửa nhánh hỏi lặp sau khi chọn tư thế. Seated/Standing lọc catalog trực tiếp, còn “Tôi muốn vận động vai” nhận ngay Shoulder Rolls.
+- Bổ sung Cat–Cow và Seated Knee Extensions vào Train và danh sách ứng viên của Coach. Yêu cầu rõ nhưng không có bài phù hợp dùng trạng thái riêng thay vì hỏi lại vùng hoặc tư thế.
+- Bổ sung 17 bài mobility cho 12 vùng chính. Train → All và Mobility đọc cùng catalog. Coach lấy vùng, tư thế, dụng cụ và thời lượng từ catalog để chọn bài.
+- Phân biệt mô tả mỏi với đau trong 12 vùng. Nút tư thế giữ nguyên vùng của lượt xác nhận và chỉ hiển thị tư thế có bài phù hợp. Câu chỉ nói mỏi hỏi thêm vùng.
 

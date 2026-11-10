@@ -74,6 +74,7 @@ function createScreen(service = async () => suggestion) {
     if (name === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
     if (name === '@/ui') return { ...tokens, useReducedMotion: () => true };
     if (name === '../model') return model;
+    if (name === '../mobility') return mobility;
     if (name === '../client') return {
       requestMobility: (request) => { requests.push(request); return service(request); },
     };
@@ -166,8 +167,39 @@ test('Neck tightness asks locally and the seated option opens an offline mobilit
   await flush(); ui.render();
   assert.match(ui.messages().at(-1).content, /unavailable/);
   assert.equal(ui.requests.at(-1).posture, 'seated');
-  ui.label('View Shoulder Rolls').onPress();
-  assert.equal(ui.opened.at(-1), 'shoulder-roll');
+  ui.label('View Chin Tucks').onPress();
+  assert.equal(ui.opened.at(-1), 'chin-tuck');
+});
+
+test('Hip fatigue keeps the hip selected through the seated quick option', async () => {
+  const ui = createScreen(offlineClient().requestMobility);
+  ui.type('Tôi bị mỏi hông');
+  ui.label('Send message').onPress();
+  await flush(); ui.render();
+  assert.equal(ui.messages().at(-1).reply.step, 'confirm');
+  ui.label('Gentle movement').onPress(); ui.render();
+  ui.label('Seated').onPress();
+  await flush(); ui.render();
+  assert.equal(ui.requests.at(-1).area, 'hips');
+  ui.label('View Seated Hip March').onPress();
+  assert.equal(ui.opened.at(-1), 'seated-hip-march');
+});
+
+test('Fatigue, pain, and missing areas are kept distinct across supported areas', () => {
+  const samples = {
+    'cổ': 'neck', 'vai': 'shoulders', 'lưng trên': 'upper back', 'lưng dưới': 'lower back',
+    'cổ tay': 'wrists', 'ngực': 'chest', 'bụng': 'core', 'hông': 'hips',
+    'đầu gối': 'knees', 'đùi sau': 'hamstrings', 'bắp chân': 'calves', 'cổ chân': 'ankles',
+  };
+  for (const [label, area] of Object.entries(samples)) {
+    const reply = mobility.textBoundary(`Tôi bị mỏi ${label}`);
+    assert.equal(reply.step, 'confirm', label);
+    assert.equal(reply.area, area, label);
+    assert.equal(mobility.textBoundary(`Tôi bị đau ${label}`).step, 'stop', label);
+  }
+  assert.equal(mobility.textBoundary('Tôi chỉ mỏi thôi').step, 'area_needed');
+  assert.equal(mobility.textBoundary('Tôi có mỏi hông vài hôm, không đau.').area, 'hips');
+  assert.equal(mobility.textBoundary('Tôi bị mỏi hông và đau đầu gối').step, 'stop');
 });
 
 test('Pain and uncertainty stop the guided flow before asking for a posture', async () => {
@@ -203,12 +235,26 @@ test('The Coach endpoint rejects invalid input and validates Groq choices agains
     method: 'POST', body: JSON.stringify(body),
   }));
   assert.equal((await send({ posture: 'lying' })).status, 400);
+  assert.equal((await send({ posture: 'seated', area: 'unknown' })).status, 400);
+  assert.equal((await (await send({ text: 'Tôi bị mỏi hông' })).json()).area, 'hips');
+  assert.equal((await (await send({ posture: 'seated', area: 'hips' })).json()).exerciseId, 'seated-hip-march');
+  assert.equal((await (await send({ posture: 'seated', area: 'lower back' })).json()).step, 'no_match');
   assert.equal((await (await send({ text: 'Mình bị đau cổ' })).json()).step, 'stop');
+  assert.equal((await (await send({ text: 'Tôi muốn vận động vai' })).json()).exerciseId, 'shoulder-roll');
+  for (const posture of ['seated', 'standing']) {
+    assert.equal((await (await send({ posture })).json()).exerciseId, 'shoulder-roll');
+  }
   assert.equal(calls, 0);
-  assert.equal((await (await send({ posture: 'seated' })).json()).exerciseId, 'shoulder-roll');
-  exerciseId = 'wall-slide';
-  assert.equal((await send({ posture: 'seated' })).status, 503);
-  assert.equal(calls, 2);
+  const freeText = { text: 'Cho mình bài vận động vai 5 phút, đứng và không dụng cụ' };
+  assert.equal((await (await send(freeText)).json()).exerciseId, 'shoulder-roll');
+  exerciseId = 'cat-cow';
+  assert.equal((await (await send({ text: 'Tôi muốn giãn lưng dưới' })).json()).exerciseId, 'cat-cow');
+  exerciseId = 'seated-knee-extension';
+  assert.equal((await (await send({ text: 'Tôi muốn vận động đầu gối khi ngồi' })).json()).exerciseId, exerciseId);
+  assert.equal((await (await send({ text: 'Tôi bị đau đầu gối' })).json()).step, 'stop');
+  exerciseId = 'not-in-catalog';
+  assert.equal((await send(freeText)).status, 503);
+  assert.equal(calls, 4);
 });
 
 test('Coach resolves every real catalog exercise and rejects unknown/prototype IDs', () => {
@@ -220,5 +266,18 @@ test('Coach resolves every real catalog exercise and rejects unknown/prototype I
   }
   for (const id of ['non-existent-exercise-999', 'toString', '__proto__']) {
     assert.equal(preview.resolveCatalogExercise(id).isAvailable, false);
+  }
+});
+
+test('Train catalog gives Coach at least two mobility options per primary area', () => {
+  const areas = [
+    'neck', 'shoulders', 'upper back', 'lower back', 'wrists', 'chest',
+    'core', 'hips', 'knees', 'hamstrings', 'calves', 'ankles',
+  ];
+  assert.equal(new Set(catalog.exercises.map(({ id }) => id)).size, catalog.exercises.length);
+  for (const area of areas) {
+    const candidates = mobility.demoMovements.filter((exercise) => exercise.areas.includes(area));
+    assert.ok(candidates.length >= 2, area);
+    for (const { id } of candidates) assert.equal(catalog.getExercise(id).group, 'Mobility');
   }
 });
