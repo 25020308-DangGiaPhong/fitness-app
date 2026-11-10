@@ -83,3 +83,9 @@ Simulator iPhone17 Pro/iOS26.2 chỉ có Expo Go57.0.9, đã mở và quan sát 
 - Home và Progress đọc cùng snapshot do `workout-sessions` sở hữu. Home dùng ngày hoàn thành theo giờ thiết bị cho lịch và tổng trong ngày, cộng thời lượng phiên đã lưu trước khi làm tròn để hiển thị.
 - Đã bỏ kho AsyncStorage riêng của Home. Các phiên từng xuất hiện trong Progress được Home đọc trực tiếp từ snapshot hiện có.
 - Lint, typecheck và 12 test pass. Test hồi quy render Home với snapshot giả lập, gồm bài dưới một phút, phiên qua nửa đêm, phiên đã hủy và phiên còn đang chạy. Chưa kiểm tra trên điện thoại thật.
+## Benchmark phân loại mức đau tiếng Việt (10/11/2026)
+
+- Notebook [coach-label-benchmark.ipynb](../scripts/coach-label-benchmark.ipynb) dùng 20 câu mẫu, 12 câu hiệu chỉnh và 28 câu thử giả lập tách riêng. So sánh MedGemma 1.5 4B chọn mã trực tiếp với MiniLM đa ngôn ngữ + cosine. Mức mỏi đơn thuần hoặc chưa nêu mức được gán `CHUA_RO` theo quy ước benchmark.
+- Đã chạy mốc cosine ký tự bằng Python trên Mac: 17/28 đúng, 2 lần gán mức khi thiếu thông tin và 8 lần trả chưa rõ cho câu đã có nhãn rõ. Đây là số đo của mốc ký tự. Điểm MedGemma và MiniLM chờ chạy notebook Colab với quyền truy cập model.
+- Đã kiểm tra cú pháp Python, logic chấm và CSV bằng dữ liệu giả lập. Benchmark chỉ đo nhãn trong câu nhập. AI Coach trong app tiếp tục ở chế độ preview.
+
