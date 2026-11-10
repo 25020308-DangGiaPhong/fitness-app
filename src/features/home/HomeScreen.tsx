@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,13 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 
-import {
-  getWorkoutHistory,
-  getWorkoutMinutesForDate,
-  getWorkoutsForDate,
-  toLocalDateKey,
-} from "../workouts/workout-history";
-import type { CompletedWorkout } from "../workouts/workout-history";
+import { getExercise } from "@/modules/exercise-catalog";
+import { elapsed, useSessions } from "@/modules/workout-sessions";
 
 type HomeScreenProps = {
   /** Replace this placeholder with the name from your authenticated user profile. */
@@ -75,11 +69,21 @@ function formatSelectedDate(date: Date): string {
   }).format(date);
 }
 
-function formatTime(isoDate: string): string {
+function toLocalDateKey(date: Date): string {
+  return date.toDateString();
+}
+
+const minuteFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+
+function formatMinutes(minutes: number): string {
+  return minutes > 0 && minutes < 0.05 ? "<0.1" : minuteFormatter.format(minutes);
+}
+
+function formatTime(timestamp: number): string {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(isoDate));
+  }).format(new Date(timestamp));
 }
 
 export default function HomeScreen({
@@ -108,68 +112,43 @@ export default function HomeScreen({
         ringTrack: "#E9E5E1",
       };
 
-  const [history, setHistory] = useState<CompletedWorkout[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { snapshot } = useSessions();
   const [displayedMonth, setDisplayedMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
   const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [todayKey, setTodayKey] = useState(() => toLocalDateKey(new Date()));
 
-  const refreshHistory = useCallback(async () => {
-    try {
-      setLoadError(null);
-      const storedHistory = await getWorkoutHistory();
-      setHistory(storedHistory);
-    } catch {
-      setLoadError("Workout history could not be loaded. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Refresh whenever the user returns to the Home tab.
-  useFocusEffect(
-    useCallback(() => {
-      let isActive = true;
-
-      const load = async () => {
-        try {
-          setLoadError(null);
-          const storedHistory = await getWorkoutHistory();
-          if (isActive) setHistory(storedHistory);
-        } catch {
-          if (isActive) {
-            setLoadError("Workout history could not be loaded. Please try again.");
-          }
-        } finally {
-          if (isActive) setLoading(false);
-        }
-      };
-
-      void load();
-      return () => {
-        isActive = false;
-      };
-    }, []),
-  );
+  useFocusEffect(useCallback(() => {
+    setTodayKey(toLocalDateKey(new Date()));
+  }, []));
 
   const calendarDays = useMemo(
     () => buildCalendarDays(displayedMonth),
     [displayedMonth],
   );
 
-  const completedDateKeys = useMemo(
-    () => new Set(history.map((workout) => toLocalDateKey(new Date(workout.completedAt)))),
-    [history],
-  );
+  const workoutsByDay = useMemo(() => {
+    const completed = snapshot.sessions
+      .filter((session): session is typeof session & { completedAt: number } =>
+        session.status === "completed" && session.completedAt !== null,
+      )
+      .sort((a, b) => a.completedAt - b.completedAt);
+    const byDay = new Map<string, typeof completed>();
+    for (const workout of completed) {
+      const day = toLocalDateKey(new Date(workout.completedAt));
+      const workouts = byDay.get(day);
+      if (workouts) workouts.push(workout);
+      else byDay.set(day, [workout]);
+    }
+    return byDay;
+  }, [snapshot.sessions]);
 
-  const selectedWorkouts = useMemo(
-    () => getWorkoutsForDate(history, selectedDate),
-    [history, selectedDate],
-  );
-
-  const todayMinutes = getWorkoutMinutesForDate(history, new Date());
+  const selectedDayKey = toLocalDateKey(selectedDate);
+  const selectedWorkouts = workoutsByDay.get(selectedDayKey) ?? [];
+  const todayMs = workoutsByDay.get(todayKey)?.reduce((total, workout) => total + elapsed(workout), 0) ?? 0;
+  const todayMinutes = todayMs / 60_000;
+  const todayMinutesLabel = formatMinutes(todayMinutes);
   const safeGoal = Math.max(1, dailyGoalMinutes);
   const progress = Math.min(todayMinutes / safeGoal, 1);
   const strokeDashOffset = RING_CIRCUMFERENCE * (1 - progress);
@@ -241,9 +220,9 @@ export default function HomeScreen({
           <View style={styles.calendarGrid}>
             {calendarDays.map(({ date, belongsToCurrentMonth }) => {
               const dateKey = toLocalDateKey(date);
-              const isSelected = dateKey === toLocalDateKey(selectedDate);
-              const isToday = dateKey === toLocalDateKey(new Date());
-              const hasWorkout = completedDateKeys.has(dateKey);
+              const isSelected = dateKey === selectedDayKey;
+              const isToday = dateKey === todayKey;
+              const hasWorkout = workoutsByDay.has(dateKey);
 
               return (
                 <View key={dateKey} style={styles.dayCell}>
@@ -287,25 +266,16 @@ export default function HomeScreen({
             <Text style={[styles.selectedDayTitle, { color: colors.text }]}>
               {formatSelectedDate(selectedDate)}
             </Text>
-            {loading ? (
-              <ActivityIndicator color={ACCENT} style={styles.inlineLoader} />
-            ) : loadError ? (
-              <View style={styles.errorRow}>
-                <Text style={[styles.emptyText, { color: colors.muted }]}>{loadError}</Text>
-                <Pressable onPress={() => void refreshHistory()}>
-                  <Text style={styles.retryText}>Retry</Text>
-                </Pressable>
-              </View>
-            ) : selectedWorkouts.length > 0 ? (
+            {selectedWorkouts.length > 0 ? (
               selectedWorkouts.map((workout) => (
                 <View key={workout.id} style={styles.workoutRow}>
                   <View style={styles.workoutIcon}>
                     <Text style={styles.workoutIconText}>✓</Text>
                   </View>
                   <View style={styles.workoutInfo}>
-                    <Text style={[styles.workoutName, { color: colors.text }]}>{workout.workoutName}</Text>
+                    <Text style={[styles.workoutName, { color: colors.text }]}>{getExercise(workout.exerciseId)?.name ?? "Workout"}</Text>
                     <Text style={[styles.workoutMeta, { color: colors.muted }]}>
-                      {formatTime(workout.startedAt)} · {workout.durationMinutes} min
+                      {formatTime(workout.startedAt)} · {formatMinutes(elapsed(workout) / 60_000)} min
                     </Text>
                   </View>
                   <Text style={styles.completedLabel}>Done</Text>
@@ -313,7 +283,7 @@ export default function HomeScreen({
               ))
             ) : (
               <Text style={[styles.emptyText, { color: colors.muted }]}>
-                {toLocalDateKey(selectedDate) === toLocalDateKey(new Date())
+                {selectedDayKey === todayKey
                   ? "No workouts logged today yet."
                   : "No workouts logged for this day."}
               </Text>
@@ -348,12 +318,12 @@ export default function HomeScreen({
               />
             </Svg>
             <View pointerEvents="none" style={styles.ringCenter}>
-              <Text style={[styles.ringNumber, { color: colors.text }]}>{todayMinutes}</Text>
+              <Text style={[styles.ringNumber, { color: colors.text }]}>{todayMinutesLabel}</Text>
               <Text style={[styles.ringUnit, { color: colors.muted }]}>MINUTES</Text>
             </View>
           </View>
           <Text style={[styles.goalText, { color: colors.text }]}>
-            {todayMinutes} / {safeGoal} min
+            {todayMinutesLabel} / {safeGoal} min
           </Text>
           <Text style={[styles.goalCaption, { color: colors.muted }]}>Daily workout goal</Text>
           <View style={[styles.progressTrack, { backgroundColor: colors.ringTrack }]}>
@@ -398,7 +368,6 @@ const styles = StyleSheet.create({
   todayLegend: { width: 10, height: 10, borderRadius: 3, borderWidth: 1, borderColor: ACCENT, marginLeft: 9 },
   selectedDayPanel: { borderRadius: 15, padding: 12, gap: 10 },
   selectedDayTitle: { fontSize: 13, fontWeight: "800" },
-  inlineLoader: { paddingVertical: 8 },
   workoutRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   workoutIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: `${COMPLETED}18`, alignItems: "center", justifyContent: "center" },
   workoutIconText: { color: COMPLETED, fontWeight: "900", fontSize: 15 },
@@ -407,8 +376,6 @@ const styles = StyleSheet.create({
   workoutMeta: { fontSize: 11 },
   completedLabel: { color: COMPLETED, fontSize: 11, fontWeight: "800" },
   emptyText: { fontSize: 12, lineHeight: 18 },
-  errorRow: { gap: 8 },
-  retryText: { color: ACCENT, fontWeight: "800", fontSize: 12 },
   activityCard: { alignItems: "center", paddingVertical: 20 },
   ringWrap: { width: RING_SIZE, height: RING_SIZE, alignItems: "center", justifyContent: "center", marginTop: 2 },
   ringCenter: { position: "absolute", alignItems: "center", justifyContent: "center" },

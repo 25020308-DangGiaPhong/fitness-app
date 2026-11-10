@@ -15,7 +15,7 @@ export default function AiCoachRoute() {
 
       router.push({
         pathname: '/workout',
-        params: { exerciseId: resolved.exerciseId },
+        params: { exerciseId: resolved.exerciseId, from: 'coach' },
       });
     },
     [router]

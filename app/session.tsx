@@ -1,9 +1,14 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { SessionScreen } from '@/modules/workout-sessions';
 
 export default function SessionRoute() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, from } = useLocalSearchParams<{ id?: string; from?: string }>();
   const router = useRouter();
-  return <SessionScreen id={id ?? ''} onProgress={() => router.replace('/progress')} onTrain={() => router.replace('/')} />;
+  return (
+    <>
+      <Stack.Screen options={{ headerBackTitle: from === 'coach' ? 'AI Coach' : 'Train' }} />
+      <SessionScreen id={id ?? ''} onProgress={() => router.replace('/progress')} onTrain={() => router.replace('/')} />
+    </>
+  );
 }

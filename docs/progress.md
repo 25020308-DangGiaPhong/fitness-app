@@ -71,3 +71,15 @@ Simulator iPhone17 Pro/iOS26.2 chỉ có Expo Go57.0.9, đã mở và quan sát 
 - README có walkthrough preview và điểm nối MedGemma; chưa có HTTP adapter/consent/auth server. DTO preview chưa phải contract backend hoàn chỉnh; phải map/validate theo hướng dẫn MedGemma ở bước sau.
 - Kiểm chứng trên Node26.7.0, bộ dependency theo package-lock hiện tại: lint/typecheck PASS, 14 tests PASS (8 workout + 6 Coach). Test Coach transpile mã thật rồi chạy callback với hooks/native giả lập; không phải native rendering/E2E. Export bundle iOS/Android PASS ra thư mục tạm; không phải IPA/APK. Warning MODULE_TYPELESS_PACKAGE_JSON của test workout còn nguyên, không làm test fail.
 - Chưa kiểm chứng render/keyboard/tab-back-state/font lớn/VoiceOver/TalkBack trên thiết bị của project. Simulator đang mở app khác (Forma Coach), không dùng làm bằng chứng runtime cho source này. Chưa chạy MedGemma hoặc đánh giá chuyên môn.
+
+## AI Coach — bố cục chat ngày 2026-11-09
+
+- Bỏ banner preview, nhãn mẫu và bảng scenario kỹ thuật khỏi màn hình. Giữ một dòng dưới composer cho biết đây là demo và chưa có AI thật.
+- Gửi tin nhắn trả ba bài cố định từ Train; chạm hàng bài mở route workout dùng chung. Back trở về tab và cuộc chat nguồn.
+- Chat mới và lịch sử đóng/mở do Coach giữ trong RAM. Không lưu qua reload hoặc đóng hẳn app; chưa lưu chat sức khỏe xuống đĩa.
+
+## Home Today’s Activity — 2026-11-10
+
+- Home và Progress đọc cùng snapshot do `workout-sessions` sở hữu. Home dùng ngày hoàn thành theo giờ thiết bị cho lịch và tổng trong ngày, cộng thời lượng phiên đã lưu trước khi làm tròn để hiển thị.
+- Đã bỏ kho AsyncStorage riêng của Home. Các phiên từng xuất hiện trong Progress được Home đọc trực tiếp từ snapshot hiện có.
+- Lint, typecheck và 12 test pass. Test hồi quy render Home với snapshot giả lập, gồm bài dưới một phút, phiên qua nửa đêm, phiên đã hủy và phiên còn đang chạy. Chưa kiểm tra trên điện thoại thật.
