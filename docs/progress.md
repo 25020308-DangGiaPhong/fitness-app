@@ -77,3 +77,9 @@ Simulator iPhone17 Pro/iOS26.2 chỉ có Expo Go57.0.9, đã mở và quan sát 
 - Bỏ banner preview, nhãn mẫu và bảng scenario kỹ thuật khỏi màn hình. Giữ một dòng dưới composer cho biết đây là demo và chưa có AI thật.
 - Gửi tin nhắn trả ba bài cố định từ Train; chạm hàng bài mở route workout dùng chung. Back trở về tab và cuộc chat nguồn.
 - Chat mới và lịch sử đóng/mở do Coach giữ trong RAM. Không lưu qua reload hoặc đóng hẳn app; chưa lưu chat sức khỏe xuống đĩa.
+
+## Home Today’s Activity — 2026-11-10
+
+- Home và Progress đọc cùng snapshot do `workout-sessions` sở hữu. Home dùng ngày hoàn thành theo giờ thiết bị cho lịch và tổng trong ngày, cộng thời lượng phiên đã lưu trước khi làm tròn để hiển thị.
+- Đã bỏ kho AsyncStorage riêng của Home. Các phiên từng xuất hiện trong Progress được Home đọc trực tiếp từ snapshot hiện có.
+- Lint, typecheck và 12 test pass. Test hồi quy render Home với snapshot giả lập, gồm bài dưới một phút, phiên qua nửa đêm, phiên đã hủy và phiên còn đang chạy. Chưa kiểm tra trên điện thoại thật.

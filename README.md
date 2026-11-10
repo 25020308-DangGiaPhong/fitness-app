@@ -33,14 +33,14 @@ npx expo export --platform all
 1. Train: xem mục tiêu và chọn một bài trong thư viện; mở hướng dẫn và số hiệp/lần.
 2. Bắt đầu phiên: timer chạy; hoàn thành hiệp đầu, xem nghỉ; pause/resume. Có thể bỏ qua thời gian nghỉ khi trình diễn.
 3. Hoàn thành hiệp cuối rồi kết thúc; xem kết quả đã lưu.
-4. Mở Progress: kiểm tra buổi tập xuất hiện đúng một lần, tổng hiệp/thời gian cập nhật.
+4. Mở Progress và kiểm tra buổi tập xuất hiện đúng một lần. Mở Home và kiểm tra lịch đánh dấu ngày hoàn thành, Today’s Activity cộng thời lượng đã lưu, kể cả bài dưới một phút.
 5. Reload hoặc đóng/mở app qua Expo Go: lịch sử còn. Thử bắt đầu một phiên rồi Back → Resume để thấy app giữ cùng phiên.
 
 Bài tập/hướng dẫn là nội dung mẫu; set hoàn thành do người dùng tự xác nhận. Timer, lifecycle, lưu kết quả và Progress tính từ phiên local là chức năng thật. Chưa đo camera, chưa xác minh thành tích, chưa phải hướng dẫn cá nhân hóa.
 
 ## Cấu trúc
 
-`app/` chỉ ghép screen/điều hướng. `exercise-catalog` sở hữu catalog mẫu; `workout-sessions` sở hữu snapshot versioned và lifecycle; `progress` đọc cùng snapshot, không lưu history riêng. `src/ui` chỉ tokens và primitives. Các module nhập nhau qua public `index`.
+`app/` chỉ ghép screen/điều hướng. `exercise-catalog` sở hữu catalog mẫu; `workout-sessions` sở hữu snapshot versioned và lifecycle; Home và Progress đọc cùng snapshot. Home nhóm phiên theo ngày hoàn thành trên thiết bị và dùng cùng cách tính thời lượng với Progress. `src/ui` chỉ tokens và primitives. Các module nhập nhau qua public `index`.
 
 Chi tiết trạng thái và giới hạn kiểm chứng: [docs/progress.md](docs/progress.md).
 
