@@ -17,8 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getExercise } from '@/modules/exercise-catalog';
 import { colors, radii, spacing, typography, useReducedMotion } from '@/ui';
 
-import { MAX_CONCERN_LENGTH, type GuidanceResponse } from '../model';
-import { requestGuidance } from '../preview';
+import { requestMobility } from '../client';
+import { MAX_CONCERN_LENGTH } from '../model';
+import type { CoachReply, CoachStep, MobilityRequest, Posture } from '../mobility';
 
 export interface CoachScreenProps {
   onOpenExerciseDetail: (exerciseId: string) => void;
@@ -26,14 +27,32 @@ export interface CoachScreenProps {
 
 type Message =
   | { id: string; role: 'user'; content: string }
-  | { id: string; role: 'coach'; content: string; suggestions?: GuidanceResponse['suggestions'] };
+  | { id: string; role: 'coach'; content: string; reply?: CoachReply };
 
 type Chat = { id: number; messages: Message[] };
 
 const welcome: Message = {
   id: 'welcome',
   role: 'coach',
-  content: 'A little movement can go a long way. What would feel good today?',
+  content: 'What kind of movement would you like today? Try asking for a short stretch at your desk.',
+};
+
+const replyText: Record<CoachStep, string> = {
+  confirm: 'Are you looking for gentle movement, or is this about pain or a recent injury?',
+  posture: 'Would you like gentle upper-body movement while seated or standing?',
+  stop: 'I’ll pause exercise suggestions here. If you need help with pain or an injury, a healthcare professional can guide you.',
+  clarify: 'I couldn’t match that request to a demo exercise. Tell me what area you want to move and whether you prefer to sit or stand.',
+  unavailable: 'AI chat is unavailable. You can still try the guided upper-body options below.',
+  suggest: 'Here’s a mobility exercise from Train.',
+};
+
+type QuickOption = 'gentle' | 'pain' | 'unsure' | Posture;
+const quickOptions: Record<QuickOption, string> = {
+  gentle: 'Gentle movement',
+  pain: 'Pain or recent injury',
+  unsure: 'Not sure',
+  seated: 'Seated',
+  standing: 'Standing',
 };
 
 export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
@@ -77,8 +96,8 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
     ));
   }
 
-  async function send() {
-    const content = draft.trim();
+  async function send(option?: QuickOption) {
+    const content = option ? quickOptions[option] : draft.trim();
     if (!content || sending.current) return;
     sending.current = true;
     scrollOnChange.current = true;
@@ -90,16 +109,20 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
     const requestId = `chat-${activeId}-turn-${revision}`;
     append({ id: requestId, role: 'user', content });
     try {
-      const reply = await requestGuidance({
-        schemaVersion: '1.0', requestId, intakeId: String(activeId), intakeRevision: revision,
-        locale: 'en', concern: content, answers: {},
-      });
-      if (reply.requestId !== requestId || reply.intakeId !== String(activeId) || reply.intakeRevision !== revision) {
-        throw new Error('Unexpected reply');
+      let reply: CoachReply;
+      let offline = false;
+      if (option === 'gentle') {
+        reply = { step: 'posture' };
+      } else if (option === 'pain' || option === 'unsure') {
+        reply = { step: 'stop' };
+      } else {
+        const request: MobilityRequest = option ? { posture: option } : { text: content };
+        ({ reply, offline } = await requestMobility(request));
       }
-      append({ id: `${requestId}-reply`, role: 'coach', content: reply.message, suggestions: reply.suggestions });
-    } catch {
-      append({ id: `${requestId}-reply`, role: 'coach', content: 'Could not load a reply. Try sending your message again.' });
+      const message = offline && reply.step === 'suggest'
+        ? 'AI chat is unavailable. Here’s a mobility option selected on this device.'
+        : replyText[reply.step];
+      append({ id: `${requestId}-reply`, role: 'coach', content: message, reply });
     } finally {
       sending.current = false;
       setPending(false);
@@ -108,15 +131,29 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
 
   function renderMessage({ item }: { item: Message }) {
     const isUser = item.role === 'user';
+    const reply = item.role === 'coach' && item.id === messages.at(-1)?.id ? item.reply : undefined;
+    const exercise = reply?.step === 'suggest' ? getExercise(reply.exerciseId) : undefined;
+    const options: QuickOption[] = reply?.step === 'confirm' || reply?.step === 'unavailable'
+      ? ['gentle', 'pain', 'unsure']
+      : reply?.step === 'posture' ? ['seated', 'standing'] : [];
     return (
       <View style={[styles.message, isUser && styles.userMessage]}>
         {!isUser && <Text style={styles.sender}>AI Coach</Text>}
         <View style={[styles.bubble, isUser && styles.userBubble]}>
           <Text selectable style={styles.body}>{item.content}</Text>
-          {item.role === 'coach' && item.suggestions?.map(({ exerciseId }) => {
-            const exercise = getExercise(exerciseId);
-            if (!exercise) return null;
-            return (
+          {options.map((option) => (
+            <Pressable
+              key={option}
+              accessibilityRole="button"
+              accessibilityLabel={quickOptions[option]}
+              disabled={pending}
+              onPress={() => void send(option)}
+              style={({ pressed }) => [styles.quickOption, pressed && styles.pressed, pending && styles.disabled]}
+            >
+              <Text style={styles.accentLabel}>{quickOptions[option]}</Text>
+            </Pressable>
+          ))}
+          {exercise && (
               <Pressable
                 key={exercise.id}
                 accessibilityRole="button"
@@ -133,8 +170,7 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
               </Pressable>
-            );
-          })}
+          )}
         </View>
       </View>
     );
@@ -217,13 +253,13 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
               accessibilityLabel="Send message"
               accessibilityState={{ disabled: sendDisabled, busy: pending }}
               disabled={sendDisabled}
-              onPress={send}
+              onPress={() => void send()}
               style={({ pressed }) => [styles.send, sendDisabled && styles.disabled, pressed && styles.pressed]}
             >
               <Ionicons name="arrow-up" size={24} color={colors.onAction} />
             </Pressable>
           </View>
-          <Text style={styles.footnote}>Demo · No live AI or personalized advice</Text>
+          <Text style={styles.footnote}>Mobility demo · Use sample messages only</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -254,6 +290,7 @@ const styles = StyleSheet.create({
   duration: { backgroundColor: colors.accentSurface, borderRadius: radii.control, padding: spacing.sm, maxWidth: '35%' },
   accentLabel: { ...typography.label, color: colors.action },
   exerciseTitle: { ...typography.bodyStrong, color: colors.textPrimary },
+  quickOption: { minHeight: 48, justifyContent: 'center', marginTop: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radii.control, backgroundColor: colors.accentSurface },
   composer: { backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.xs, backgroundColor: colors.canvas, borderWidth: 1, borderColor: colors.border, borderRadius: radii.card },
   input: { ...typography.body, color: colors.textPrimary, flex: 1, minHeight: 48, maxHeight: 104, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },

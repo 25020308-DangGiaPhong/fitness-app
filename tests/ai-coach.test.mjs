@@ -10,7 +10,7 @@ import ts from 'typescript';
 const root = path.resolve(import.meta.dirname, '..');
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
-function load(file, requireModule) {
+function load(file, requireModule, globals = {}) {
   const exports = {};
   const source = fs.readFileSync(path.join(root, file), 'utf8');
   const { outputText } = ts.transpileModule(source, {
@@ -20,7 +20,7 @@ function load(file, requireModule) {
       esModuleInterop: true,
     },
   });
-  vm.runInNewContext(outputText, { exports, require: requireModule, ...testGlobals });
+  vm.runInNewContext(outputText, { exports, require: requireModule, ...testGlobals, ...globals });
   return exports;
 }
 
@@ -34,7 +34,10 @@ const preview = load('src/modules/ai-coach/preview.ts', (name) => {
   throw new Error(`Unexpected import: ${name}`);
 });
 
-function createScreen(service = preview.requestGuidance) {
+const mobility = load('src/modules/ai-coach/mobility.ts', () => catalog);
+const suggestion = { reply: { step: 'suggest', exerciseId: 'shoulder-roll' }, offline: false };
+
+function createScreen(service = async () => suggestion) {
   const slots = [];
   const requests = [];
   let cursor = 0;
@@ -71,9 +74,8 @@ function createScreen(service = preview.requestGuidance) {
     if (name === 'react-native-safe-area-context') return { SafeAreaView: 'SafeAreaView' };
     if (name === '@/ui') return { ...tokens, useReducedMotion: () => true };
     if (name === '../model') return model;
-    if (name === '../preview') return {
-      ...preview,
-      requestGuidance: (request) => { requests.push(request); return service(request); },
+    if (name === '../client') return {
+      requestMobility: (request) => { requests.push(request); return service(request); },
     };
     throw new Error(`Unexpected import: ${name}`);
   });
@@ -114,7 +116,7 @@ function createScreen(service = preview.requestGuidance) {
   };
 }
 
-test('Coach sends one turn and offers three working catalog links', async () => {
+test('Coach sends one turn and opens its selected exercise from Train', async () => {
   const ui = createScreen();
   ui.type('Show me something to try');
   const send = ui.label('Send message').onPress;
@@ -123,22 +125,16 @@ test('Coach sends one turn and offers three working catalog links', async () => 
 
   assert.equal(ui.requests.length, 1);
   assert.equal(ui.messages().filter(({ role }) => role === 'user').length, 1);
-  const suggestions = ui.messages().at(-1).suggestions;
-  assert.equal(new Set(suggestions.map(({ exerciseId }) => exerciseId)).size, 3);
-  for (const { exerciseId } of suggestions) {
-    const exercise = catalog.getExercise(exerciseId);
-    assert.ok(exercise);
-    ui.label(`View ${exercise.name}`).onPress();
-    assert.equal(ui.opened.at(-1), exerciseId);
-  }
+  ui.label('View Shoulder Rolls').onPress();
+  assert.equal(ui.opened.at(-1), 'shoulder-roll');
   ui.type('Next message');
   assert.equal(ui.label('Send message').disabled, false);
 });
 
 test('Chat history restores the right thread even if its reply arrived in another chat', async () => {
   let complete;
-  const ui = createScreen((request) => new Promise((resolve) => {
-    complete = async () => resolve(await preview.requestGuidance(request));
+  const ui = createScreen(() => new Promise((resolve) => {
+    complete = () => resolve(suggestion);
   }));
   ui.type('First conversation');
   ui.label('Send message').onPress(); ui.render();
@@ -149,7 +145,70 @@ test('Chat history restores the right thread even if its reply arrived in anothe
   ui.history();
   ui.openChat('First conversation');
   assert.equal(ui.messages()[1].content, 'First conversation');
-  assert.equal(ui.messages()[2].suggestions.length, 3);
+  assert.equal(ui.messages()[2].reply.exerciseId, 'shoulder-roll');
+});
+
+function offlineClient() {
+  return load('src/modules/ai-coach/client.ts', (name) =>
+    name === 'expo-constants' ? { expoConfig: { hostUri: 'localhost:8094' } } : mobility, {
+    process: { env: {} }, __DEV__: true, AbortController, URL,
+    fetch: async () => { throw new Error('Offline'); },
+  });
+}
+
+test('Neck tightness asks locally and the seated option opens an offline mobility exercise', async () => {
+  const ui = createScreen(offlineClient().requestMobility);
+  ui.type('Mình bị mỏi cổ');
+  ui.label('Send message').onPress();
+  await flush(); ui.render();
+  ui.label('Gentle movement').onPress(); ui.render();
+  ui.label('Seated').onPress();
+  await flush(); ui.render();
+  assert.match(ui.messages().at(-1).content, /unavailable/);
+  assert.equal(ui.requests.at(-1).posture, 'seated');
+  ui.label('View Shoulder Rolls').onPress();
+  assert.equal(ui.opened.at(-1), 'shoulder-roll');
+});
+
+test('Pain and uncertainty stop the guided flow before asking for a posture', async () => {
+  for (const option of ['Pain or recent injury', 'Not sure']) {
+    const ui = createScreen(offlineClient().requestMobility);
+    ui.type('Mình bị mỏi cổ');
+    ui.label('Send message').onPress();
+    await flush(); ui.render();
+    ui.label(option).onPress(); ui.render();
+    assert.equal(ui.requests.length, 1);
+    assert.equal(ui.messages().at(-1).reply.step, 'stop');
+  }
+});
+
+test('The Coach endpoint rejects invalid input and validates Groq choices against the filtered catalog', async () => {
+  let calls = 0;
+  let exerciseId = 'shoulder-roll';
+  const { POST } = load('app/api/coach+api.ts', () =>
+    load('src/modules/ai-coach/server.ts', (name) => ({
+      '@/modules/exercise-catalog/catalog': catalog, './model': model, './mobility': mobility,
+    })[name], {
+      Response, AbortSignal, process: { env: { GROQ_API_KEY: 'test-placeholder' } },
+      fetch: async (_url, options) => {
+        calls++;
+        const body = JSON.parse(options.body);
+        assert.equal(body.model, 'openai/gpt-oss-20b');
+        assert.equal(body.response_format.json_schema.strict, true);
+        return Response.json({ choices: [{ message: { content: JSON.stringify({ step: 'suggest', exerciseId }) } }] });
+      },
+    }),
+  );
+  const send = (body) => POST(new Request('http://localhost/api/coach', {
+    method: 'POST', body: JSON.stringify(body),
+  }));
+  assert.equal((await send({ posture: 'lying' })).status, 400);
+  assert.equal((await (await send({ text: 'Mình bị đau cổ' })).json()).step, 'stop');
+  assert.equal(calls, 0);
+  assert.equal((await (await send({ posture: 'seated' })).json()).exerciseId, 'shoulder-roll');
+  exerciseId = 'wall-slide';
+  assert.equal((await send({ posture: 'seated' })).status, 503);
+  assert.equal(calls, 2);
 });
 
 test('Coach resolves every real catalog exercise and rejects unknown/prototype IDs', () => {

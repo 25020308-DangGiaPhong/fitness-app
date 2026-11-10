@@ -1,8 +1,8 @@
 # Fitness App — local workout demo
 
-React Native + Expo SDK58 + TypeScript. UI English, neutral/coral. Scope hiện tại: Train → chọn bài mẫu → phiên tập (sets, nghỉ, pause/resume/cancel) → kết quả → Progress/lịch sử local. Không có backend, AI, camera, sự kiện hoặc leaderboard trong lát cắt này.
+React Native + Expo SDK58 + TypeScript. UI English, neutral/coral. Luồng tập và Progress lưu local. Demo không cần camera, sự kiện hoặc leaderboard.
 
-Có thêm tab **AI Coach** ở chế độ UI preview, chưa kết nối MedGemma hoặc API. Thứ tự tab: Train → AI Coach → Progress. Không có tư vấn y tế cá nhân hóa.
+Tab **AI Coach** hướng dẫn mobility và stretching. Demo có thể dùng Groq qua Expo dev server hoặc dùng lựa chọn nhanh trên thiết bị.
 
 ## Mở trên iPhone
 
@@ -44,12 +44,13 @@ Bài tập/hướng dẫn là nội dung mẫu; set hoàn thành do người dù
 
 Chi tiết trạng thái và giới hạn kiểm chứng: [docs/progress.md](docs/progress.md).
 
-## Thử AI Coach preview
+## Thử AI Coach
 
-1. Mở **AI Coach** và gửi một tin nhắn. Bản demo trả cùng ba bài từ Train, không phân tích nội dung hoặc gọi AI.
-2. Chạm một bài để mở đúng màn hướng dẫn như khi đi từ Train. Dùng Back để về cuộc chat; Start/Resume dùng luồng tập hiện có.
-3. Chạm biểu tượng soạn tin để mở chat mới; mở **Chat history** để quay lại chat trước. Lịch sử chỉ ở RAM và mất khi đóng hẳn hoặc reload app.
+1. Để bật live AI, tạo `.env.local` ở root và thêm `GROQ_API_KEY` từ tài khoản Groq. Khởi động lại Metro. Key là biến server, còn `EXPO_PUBLIC_COACH_ORIGIN` chỉ dùng nếu cần chỉ định URL server khác. Demo dùng mạng nội bộ tin cậy. Giữ endpoint dev trong LAN.
+2. Mở **AI Coach** và gửi câu mẫu `Mình bị mỏi cổ`. Chọn **Gentle movement → Seated** để xem **Shoulder Rolls**, một bài vận động vai và lưng trên trong Train. Thử lại với **Pain or recent injury** và **Not sure** để kiểm tra Coach dừng ở bước đó.
+3. Thử câu wellness tự do như `Mình có 5 phút ở văn phòng, muốn vận động vai khi đứng, không dụng cụ`. Khi Groq khả dụng, Coach chọn từ catalog. Khi thiếu key, quá thời gian chờ hoặc mất kết nối, Coach báo AI tạm gián đoạn và luồng chọn nhanh vẫn hoạt động sau khi app đã mở.
+4. Chạm thẻ bài để mở Train, rồi Back để về chat. Lịch sử chat chỉ ở RAM và mất khi đóng hẳn hoặc reload app.
 
-Coach sở hữu transcript/draft; Train sở hữu catalog. Chat không ghi vào snapshot workout hay Progress. `requestGuidance` vẫn là điểm nối preview; các scenario kỹ thuật không còn trên giao diện. Chưa có HTTP adapter, auth hoặc consent server. Xem [hướng dẫn MedGemma](docs/medgemma-coach-handoff.md) cho định hướng tích hợp sau khi nội dung/policy chuyên môn đã được duyệt.
+Coach sở hữu transcript và request/response của `POST /api/coach`. Train sở hữu catalog và hướng dẫn bài. Request tự do được gửi tới Groq để chọn từ danh sách ID giới hạn. Luồng xác nhận cho câu “mỏi cổ” chạy local và chỉ gửi lựa chọn tư thế khi cần chọn bài. Dùng câu mẫu và dữ liệu giả lập trong demo dành cho người lớn. Endpoint demo chưa có xác thực hoặc giới hạn lượt gọi.
 
-Test Coach kiểm tra gửi trùng, mở đúng bài qua callback và khôi phục đúng cuộc chat khi phản hồi đến sau khi chuyển chat. Các test này không xác nhận render, điều hướng native, bàn phím hoặc screen reader trên thiết bị.
+Test Coach dùng callback và fetch giả lập để kiểm tra gửi trùng, đổi chat khi đang đợi, nhánh dừng, offline và kiểm tra ID. Cần chạy lại walkthrough bằng Expo Go với key thật để xác nhận Groq và hành vi trên điện thoại.

@@ -35,12 +35,17 @@ module.exports = {
           if (!target) return;
           const parts = modulePath(target);
           if (!parts || !parts[0]) return;
+          const isCatalogData = target === path.join(modulesRoot, 'exercise-catalog', 'catalog');
+          const isCoachApi = target === path.join(modulesRoot, 'ai-coach', 'server') &&
+            importer === path.resolve(sourceRoot, '../app/api/coach+api.ts');
 
           if (importer.startsWith(path.join(sourceRoot, 'ui') + path.sep)) {
             context.report({ node: source, messageId: 'sharedImport' });
           } else if (
             parts[0] !== owner &&
             parts.length > 1 &&
+            !isCatalogData &&
+            !isCoachApi &&
             !(parts.length === 2 && /^index(?:\.[cm]?[jt]sx?)?$/.test(parts[1]))
           ) {
             context.report({

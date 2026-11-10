@@ -89,3 +89,10 @@ Simulator iPhone17 Pro/iOS26.2 chỉ có Expo Go57.0.9, đã mở và quan sát 
 - Đã chạy mốc cosine ký tự bằng Python trên Mac: 17/28 đúng, 2 lần gán mức khi thiếu thông tin và 8 lần trả chưa rõ cho câu đã có nhãn rõ. Đây là số đo của mốc ký tự. Điểm MedGemma và MiniLM chờ chạy notebook Colab với quyền truy cập model.
 - Đã kiểm tra cú pháp Python, logic chấm và CSV bằng dữ liệu giả lập. Benchmark chỉ đo nhãn trong câu nhập. AI Coach trong app tiếp tục ở chế độ preview.
 
+## Mobility & Stretching Coach — demo nội bộ (2026-11-10)
+
+- Tab Coach dùng lựa chọn nhanh cho câu mẫu “Mình bị mỏi cổ”, sau đó chọn bài mobility trong Train theo tư thế. Nhánh đau/chấn thương hoặc chưa chắc dừng trước thẻ bài. Body Map để sau.
+- Coach sở hữu chat trong RAM và hợp đồng API. Expo dev server giữ key, gọi Groq GPT-OSS 20B và kiểm tra ID theo danh sách đủ điều kiện. Train sở hữu catalog. Khi không gọi được Groq, các lựa chọn nhanh vẫn chọn bài local và báo rõ nguồn kết quả.
+- Lint, typecheck, 15 tests và export bundle iOS/Android pass trên Node 26.7.0. Test callback và Groq giả lập chưa thay cho Expo Go trên điện thoại hoặc một lượt gọi Groq thật.
+- Kiểm tra HTTP qua Metro local: “mỏi cổ” trả confirm, “đau cổ” trả stop, thiếu key trả 503, tư thế sai trả 400.
+

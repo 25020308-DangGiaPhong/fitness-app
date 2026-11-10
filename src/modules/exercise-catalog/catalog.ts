@@ -1,4 +1,5 @@
 
+// Data-only public entry point for consumers that run outside the native UI.
 export type Exercise = {
   id: string;
   name: string;

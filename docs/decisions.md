@@ -57,3 +57,7 @@ Người dùng đã cho phép chủ động triển khai demo, sau đó thu gọ
 ## AI Coach preview — sửa sau review (2026-11-08)
 
 Sau khi yêu cầu tài liệu tạo tab trước rồi mới tích hợp MedGemma, người dùng cung cấp mã tab và yêu cầu kiểm tra, sau đó yêu cầu sửa findings. Phạm vi sửa: khóa gửi/xác nhận/retry và bỏ callback cũ, dùng catalog/tokens thật, test hồi quy và cập nhật bàn giao. Ba tab Train/AI Coach/Progress; Coach chỉ dùng fixture trong RAM, không backend/model/thu dữ liệu sức khỏe thật. Chưa cấp quyền triển khai MedGemma, dịch vụ cloud hoặc mở tư vấn y tế.
+
+## Mobility & Stretching Coach — demo nội bộ (2026-11-10)
+
+Người dùng duyệt một luồng demo hackathon dành cho người lớn với Groq GPT-OSS 20B qua Expo API route. Coach chọn bài mobility trong Train, có thể hỏi thêm bằng nút chọn và dừng gợi ý khi người dùng báo đau, chấn thương hoặc chưa chắc. Giữ key trên dev server, dùng câu mẫu, giữ chat trong RAM. Body Map và phát hành nằm ngoài lượt này.
