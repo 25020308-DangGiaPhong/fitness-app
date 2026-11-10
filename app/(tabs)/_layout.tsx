@@ -103,6 +103,24 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* PROFILE TAB */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              size={size}
+              color={
+                focused
+                  ? colors.action
+                  : colors.textSecondary
+              }
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
