@@ -1,11 +1,12 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { useSessions } from '@/modules/workout-sessions';
 import { AppText, Button, colors, Screen, spacing } from '@/ui';
 
+import { exerciseImages } from '../exerciseImages';
 import { exercises, type Exercise } from '../catalog';
 
 // Only these four filters are allowed.
@@ -292,15 +293,26 @@ export function TrainScreen({
               pressed && { opacity: 0.65 },
             ]}
           >
+            {/* EXERCISE IMAGE */}
             <View style={styles.exerciseIcon}>
-              <Ionicons
-                name={exercise.icon}
-                size={26}
-                color={colors.action}
-                accessible={false}
-              />
+              {exerciseImages[exercise.id] ? (
+                <Image
+                  source={exerciseImages[exercise.id]}
+                  style={styles.exerciseImage}
+                  resizeMode="contain"
+                  accessible={false}
+                />
+              ) : (
+                <Ionicons
+                  name={exercise.icon}
+                  size={26}
+                  color={colors.action}
+                  accessible={false}
+                />
+              )}
             </View>
 
+            {/* EXERCISE INFORMATION */}
             <View style={styles.exerciseCopy}>
               <AppText variant="bodyStrong">
                 {exercise.name}
@@ -497,13 +509,21 @@ const styles = StyleSheet.create({
     minHeight: 88,
   },
 
+  // Increased image container size.
   exerciseIcon: {
-    width: 48,
-    height: 48,
+    width: 64,
+    height: 64,
     borderRadius: 14,
     backgroundColor: colors.accentSurface,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+
+  // Increased exercise image size.
+  exerciseImage: {
+    width: 64,
+    height: 64,
   },
 
   exerciseCopy: {
@@ -522,3 +542,4 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
 });
+

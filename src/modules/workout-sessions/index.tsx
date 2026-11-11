@@ -1,3 +1,5 @@
+import { useAuth } from '@/modules/auth';
+import { syncCompletedSession } from './cloudSync';
 import * as FileSystem from 'expo-file-system/legacy';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 
@@ -15,6 +17,11 @@ export function SessionsProvider({ children }: PropsWithChildren) {
   const current = useRef(snapshot);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
+
+  const syncedSessions = useRef(new Set<string>());
+  const syncingSessions = useRef(new Set<string>());
   const path = `${FileSystem.documentDirectory}fitness-sessions-v1.json`;
   const load = useCallback(async () => {
     try {
@@ -26,6 +33,50 @@ export function SessionsProvider({ children }: PropsWithChildren) {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not read local data.'); }
   }, [path]);
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
+  // THÊM useEffect ĐỒNG BỘ Ở ĐÂY
+  useEffect(() => {
+    if (!ready || authLoading || !userId) return;
+
+    let cancelled = false;
+
+    const sync = async () => {
+      const completedSessions = snapshot.sessions.filter(
+        (session) => session.status === 'completed',
+      );
+
+      for (const session of completedSessions) {
+        if (cancelled) break;
+
+        const key = `${userId}:${session.id}`;
+
+        if (
+          syncedSessions.current.has(key) ||
+          syncingSessions.current.has(key)
+        ) {
+          continue;
+        }
+
+        syncingSessions.current.add(key);
+
+        try {
+          await syncCompletedSession(session, userId);
+          syncedSessions.current.add(key);
+        } catch (error) {
+          console.warn(`Could not sync workout ${session.id}:`, error);
+        } finally {
+          syncingSessions.current.delete(key);
+        }
+      }
+    };
+
+    void sync();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, authLoading, userId, snapshot.sessions]);
+
+  // PHẦN CODE CŨ GIỮ NGUYÊN
   const writer = useRef<ReturnType<typeof createSessionWriter> | null>(null);
   const commit = (update: (previous: Snapshot) => Snapshot) => {
     if (!writer.current) writer.current = createSessionWriter(
