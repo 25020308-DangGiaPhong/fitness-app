@@ -119,7 +119,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
           </AppText>
 
           <AppText tone="secondary" style={styles.center}>
-            That's how momentum starts. Nice work.
+            That&apos;s how momentum starts. Nice work.
           </AppText>
         </View>
 

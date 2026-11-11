@@ -1,5 +1,10 @@
 # Tiến độ và hạn chế
 
+## Sửa lỗi chạy sau pull — 2026-11-11
+
+- Máy thiếu expo-image và expo-image-picker mới được thêm trong package-lock. Chạy npm ci để cài đúng dependency đã khóa. Sửa script ios bị khai báo hai lần và dấu nháy trong JSX của màn kết quả phiên tập làm lint fail.
+- Lint, typecheck, 22 tests, diff check và export bundle iOS/Android pass trên Node26.7.0. Chưa kiểm tra lại runtime Simulator hoặc chức năng upload ảnh/cloud sync với Supabase thật.
+
 Ngày 2026-11-07. Kế hoạch GĐ0 đã được duyệt. Lượt hiện tại triển khai foundation/app shell; toàn bộ luồng demo hackathon 08/11/2026 là lát cắt tiếp theo.
 
 ## Giai đoạn 0
