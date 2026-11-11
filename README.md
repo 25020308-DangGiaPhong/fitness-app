@@ -55,4 +55,8 @@ Coach sở hữu transcript và request/response của `POST /api/coach`. Train 
 
 Trong **Train → All** và **Mobility**, các bài mobility bao phủ cổ, vai, lưng trên, lưng dưới, cổ tay, ngực, core, hông, đầu gối, đùi sau, bắp chân và cổ chân. Coach dùng vùng tập, tư thế, dụng cụ và thời lượng từ cùng catalog.
 
+Khi chat tự do, Coach gửi tối đa 8 tin nhắn gần nhất trong cuộc chat hiện tại để hiểu các câu tiếp nối như “Standing stretch” rồi “Back”. Model trả câu hỏi cụ thể cho thông tin còn thiếu. Chat mới bắt đầu với ngữ cảnh rỗng.
+
+Khi chat tự do gặp lỗi, thông báo cho biết quá thời gian chờ, chạm quota hoặc không kết nối được. Nút **Try again** gửi lại câu vừa hỏi với ngữ cảnh cũ. Các lựa chọn nhanh về vùng và tư thế đã chọn vẫn có thể lọc bài trên máy.
+
 Test Coach dùng callback và fetch giả lập để kiểm tra gửi trùng, đổi chat khi đang đợi, nhánh dừng, offline và kiểm tra ID. Cần chạy lại walkthrough bằng Expo Go với key thật để xác nhận Groq và hành vi trên điện thoại.

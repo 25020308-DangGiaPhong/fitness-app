@@ -17,11 +17,14 @@ const areaPatterns = {
 
 export type MobilityArea = keyof typeof areaPatterns;
 export type Posture = 'seated' | 'standing' | 'floor';
-export type MobilityRequest = { text: string } | { posture: Posture; area: MobilityArea };
-export type CoachReply =
+export type ConversationTurn = { role: 'user' | 'assistant'; content: string };
+export type MobilityRequest = { text: string; history?: ConversationTurn[] } | { posture: Posture; area: MobilityArea };
+export const MAX_HISTORY_TURNS = 8;
+export type CoachReply = (
   | { step: 'confirm' | 'posture'; area: MobilityArea }
-  | { step: 'stop' | 'area_needed' | 'clarify' | 'no_match' | 'unavailable' }
-  | { step: 'suggest'; exerciseId: string };
+  | { step: 'stop' | 'area_needed' | 'leg_area_needed' | 'clarify' | 'no_match' | 'unavailable' }
+  | { step: 'suggest'; exerciseId: string }
+) & { message?: string };
 export type CoachStep = CoachReply['step'];
 
 export const demoMovements = exercises.flatMap(({ id, name, minutes, mobility }) =>
@@ -63,11 +66,24 @@ export function textBoundary(text: string): CoachReply | undefined {
   }
   if (/(?<![\p{L}])(?:mỏi|căng|moi|cang|stiff\w*|sore\w*|tight\w*|discomfort)(?![\p{L}])/u.test(lower)) {
     const area = findMobilityArea(text);
-    return area ? { step: 'confirm', area } : { step: 'area_needed' };
+    if (area) return { step: 'confirm', area };
+    return { step: /\b(chan|legs?)\b/.test(normalized) ? 'leg_area_needed' : 'area_needed' };
   }
 }
 
 export function readCoachReply(value: unknown): CoachReply | undefined {
+  const reply = readReplyFields(value);
+  if (!reply) return;
+  if (value && typeof value === 'object' && 'message' in value) {
+    if (typeof value.message !== 'string' || !value.message.trim() || value.message.length > 400) return;
+    if (reply.step === 'clarify' || reply.step === 'no_match' || reply.step === 'suggest') {
+      return { ...reply, message: value.message.trim() };
+    }
+  }
+  return reply;
+}
+
+function readReplyFields(value: unknown): CoachReply | undefined {
   if (!value || typeof value !== 'object' || !('step' in value)) return;
   switch (value.step) {
     case 'suggest':
@@ -81,6 +97,7 @@ export function readCoachReply(value: unknown): CoachReply | undefined {
       if ('area' in value && isMobilityArea(value.area)) return { step: value.step, area: value.area };
       return;
     case 'area_needed':
+    case 'leg_area_needed':
     case 'stop':
     case 'clarify':
     case 'no_match':
