@@ -3,11 +3,16 @@
     "name": "Fitness App",
     "slug": "fitness-app",
     "version": "0.1.0",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "orientation": "default",
     "scheme": "fitnessapp",
     "userInterfaceStyle": "light",
-    "web": { "output": "server" },
+    "web": {
+      "output": "server"
+    },
     "ios": {
       "supportsTablet": false
     },
@@ -21,7 +26,8 @@
         {
           "backgroundColor": "#F5F3F0"
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true
