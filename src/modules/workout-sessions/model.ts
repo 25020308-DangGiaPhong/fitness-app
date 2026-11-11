@@ -22,7 +22,10 @@ export const emptySnapshot: Snapshot = { schemaVersion: 1, sessions: [], activeI
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null; }
 function natural(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value) && value >= 0; }
 function isSession(value: unknown): value is Session {
-  return record(value) && typeof value.id === 'string' && value.id.length > 0 && typeof value.exerciseId === 'string' && ['active', 'paused', 'completed', 'cancelled'].includes(String(value.status)) && natural(value.restMs) && (value.restPausedMs === null || natural(value.restPausedMs) && value.restPausedMs <= value.restMs) && (value.restSince === null || natural(value.restSince)) && natural(value.setsDone) && Number.isInteger(value.setsDone) && natural(value.totalSets) && value.totalSets > 0 && Number.isInteger(value.totalSets) && value.setsDone <= value.totalSets && natural(value.startedAt) && natural(value.elapsedMs) && (value.activeSince === null || natural(value.activeSince)) && (value.completedAt === null || natural(value.completedAt)) && (value.status === 'active' ? natural(value.activeSince) : value.activeSince === null) && (value.status === 'completed' ? natural(value.completedAt) && value.setsDone === value.totalSets : value.completedAt === null)&& (value.workoutMode === undefined ||
+  return record(value) && typeof value.id === 'string' && value.id.length > 0 && typeof value.exerciseId === 'string' && ['active', 'paused', 'completed', 'cancelled'].includes(String(value.status)) && natural(value.restMs) && (value.restPausedMs === null || natural(value.restPausedMs) && value.restPausedMs <= value.restMs) && (value.restSince === null || natural(value.restSince)) && natural(value.setsDone) && Number.isInteger(value.setsDone) && natural(value.totalSets) && value.totalSets > 0 && Number.isInteger(value.totalSets) && value.setsDone <= value.totalSets && natural(value.startedAt) && natural(value.elapsedMs) && (value.activeSince === null || natural(value.activeSince)) && (value.completedAt === null || natural(value.completedAt)) && (value.status === 'active' ? natural(value.activeSince) : value.activeSince === null) && (value.status === 'completed'
+  ? natural(value.completedAt) &&
+    (value.workoutMode === 'camera-ai' || value.setsDone === value.totalSets)
+  : value.completedAt === null)&& (value.workoutMode === undefined ||
     value.workoutMode === 'timer' ||
     value.workoutMode === 'camera-ai')
 && (value.repsCompleted === undefined ||
@@ -47,7 +50,19 @@ export function changeSession(snapshot: Snapshot, id: string, action: 'set' | 'p
   if (action === 'skip-rest' && session.status === 'active') updated = { ...session, restSince: null };
   if (action === 'pause' && session.status === 'active') updated = { ...session, status: 'paused', restPausedMs: session.restSince === null ? null : restRemaining(session, now), elapsedMs: elapsed(session, now), activeSince: null };
   if (action === 'resume' && session.status === 'paused') updated = { ...session, status: 'active', restSince: session.restSince === null ? null : now - (session.restMs - (session.restPausedMs ?? session.restMs)), restPausedMs: null, activeSince: now };
-  if (action === 'complete' && session.setsDone === session.totalSets) updated = { ...session, status: 'completed', elapsedMs: elapsed(session, now), activeSince: null, completedAt: now };
+  if (
+  action === 'complete' &&
+  (session.workoutMode === 'camera-ai' ||
+    session.setsDone === session.totalSets)
+) {
+  updated = {
+    ...session,
+    status: 'completed',
+    elapsedMs: elapsed(session, now),
+    activeSince: null,
+    completedAt: now,
+  };
+}
   if (action === 'cancel') updated = { ...session, status: 'cancelled', elapsedMs: elapsed(session, now), activeSince: null };
   if (updated === session) return snapshot;
   return { ...snapshot, activeId: updated.status === 'completed' || updated.status === 'cancelled' ? null : snapshot.activeId, sessions: snapshot.sessions.map((item) => item.id === id ? updated : item) };
