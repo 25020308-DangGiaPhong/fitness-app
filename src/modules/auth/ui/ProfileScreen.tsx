@@ -1,4 +1,4 @@
-
+import { File } from 'expo-file-system';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -177,15 +177,14 @@ export function ProfileScreen() {
       setSaving(true);
 
       let uploadedAvatarUrl = profile?.avatar_url ?? null;
-
+      const previousAvatarUrl = profile?.avatar_url ?? null;
       if (newAvatarUri) {
-        const response = await fetch(newAvatarUri);
+        const imageFile = new File(newAvatarUri);
+        const arrayBuffer = await imageFile.arrayBuffer();
 
-        if (!response.ok) {
-            throw new Error('Could not read the selected image.');
+        if (arrayBuffer.byteLength === 0) {
+            throw new Error('The selected image is empty.');
         }
-
-        const arrayBuffer = await response.arrayBuffer();
 
         const filePath = `${user.id}/avatar-${Date.now()}.jpg`;
 
@@ -226,7 +225,33 @@ export function ProfileScreen() {
 
       if (updateError) throw updateError;
 
-      setProfile(updatedProfile);
+        // Delete the previous avatar after the new profile is saved.
+        if (
+        previousAvatarUrl &&
+        uploadedAvatarUrl &&
+        previousAvatarUrl !== uploadedAvatarUrl
+        ) {
+        try {
+            const oldFilePath = decodeURIComponent(
+            previousAvatarUrl.split('/avatars/')[1]?.split('?')[0] ?? '',
+            );
+
+            // Only delete files belonging to the current user.
+            if (oldFilePath.startsWith(`${user.id}/`)) {
+            const { error: deleteError } = await supabase.storage
+                .from('avatars')
+                .remove([oldFilePath]);
+
+            if (deleteError) {
+                console.warn('Could not delete old avatar:', deleteError.message);
+            }
+            }
+        } catch (error) {
+            console.warn('Old avatar cleanup failed:', error);
+        }
+        }
+
+        setProfile(updatedProfile);
       setAvatarUri(uploadedAvatarUrl);
       setNewAvatarUri(null);
       setEditing(false);
