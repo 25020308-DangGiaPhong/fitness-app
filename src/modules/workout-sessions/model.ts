@@ -1,10 +1,35 @@
-export type Session = { id: string; exerciseId: string; status: 'active' | 'paused' | 'completed' | 'cancelled'; setsDone: number; restMs: number; restPausedMs: number | null; restSince: number | null; totalSets: number; startedAt: number; elapsedMs: number; activeSince: number | null; completedAt: number | null };
+export type Session = {
+  id: string;
+  exerciseId: string;
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
+  setsDone: number;
+  restMs: number;
+  restPausedMs: number | null;
+  restSince: number | null;
+  totalSets: number;
+  startedAt: number;
+  elapsedMs: number;
+  activeSince: number | null;
+  completedAt: number | null;
+
+  // Camera AI metadata
+  workoutMode?: 'timer' | 'camera-ai';
+  repsCompleted?: number;
+  formFeedback?: string[];
+};
 export type Snapshot = { schemaVersion: 1; sessions: Session[]; activeId: string | null };
 export const emptySnapshot: Snapshot = { schemaVersion: 1, sessions: [], activeId: null };
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null; }
 function natural(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value) && value >= 0; }
 function isSession(value: unknown): value is Session {
-  return record(value) && typeof value.id === 'string' && value.id.length > 0 && typeof value.exerciseId === 'string' && ['active', 'paused', 'completed', 'cancelled'].includes(String(value.status)) && natural(value.restMs) && (value.restPausedMs === null || natural(value.restPausedMs) && value.restPausedMs <= value.restMs) && (value.restSince === null || natural(value.restSince)) && natural(value.setsDone) && Number.isInteger(value.setsDone) && natural(value.totalSets) && value.totalSets > 0 && Number.isInteger(value.totalSets) && value.setsDone <= value.totalSets && natural(value.startedAt) && natural(value.elapsedMs) && (value.activeSince === null || natural(value.activeSince)) && (value.completedAt === null || natural(value.completedAt)) && (value.status === 'active' ? natural(value.activeSince) : value.activeSince === null) && (value.status === 'completed' ? natural(value.completedAt) && value.setsDone === value.totalSets : value.completedAt === null);
+  return record(value) && typeof value.id === 'string' && value.id.length > 0 && typeof value.exerciseId === 'string' && ['active', 'paused', 'completed', 'cancelled'].includes(String(value.status)) && natural(value.restMs) && (value.restPausedMs === null || natural(value.restPausedMs) && value.restPausedMs <= value.restMs) && (value.restSince === null || natural(value.restSince)) && natural(value.setsDone) && Number.isInteger(value.setsDone) && natural(value.totalSets) && value.totalSets > 0 && Number.isInteger(value.totalSets) && value.setsDone <= value.totalSets && natural(value.startedAt) && natural(value.elapsedMs) && (value.activeSince === null || natural(value.activeSince)) && (value.completedAt === null || natural(value.completedAt)) && (value.status === 'active' ? natural(value.activeSince) : value.activeSince === null) && (value.status === 'completed' ? natural(value.completedAt) && value.setsDone === value.totalSets : value.completedAt === null)&& (value.workoutMode === undefined ||
+    value.workoutMode === 'timer' ||
+    value.workoutMode === 'camera-ai')
+&& (value.repsCompleted === undefined ||
+    natural(value.repsCompleted) && Number.isInteger(value.repsCompleted))
+&& (value.formFeedback === undefined ||
+    Array.isArray(value.formFeedback) &&
+    value.formFeedback.every((item) => typeof item === 'string'));
 }
 export function parseSnapshot(value: unknown): Snapshot {
   if (!record(value) || value.schemaVersion !== 1 || !Array.isArray(value.sessions) || !value.sessions.every(isSession) || !(value.activeId === null || typeof value.activeId === 'string')) throw new Error('Saved workout data could not be read. Your file has been preserved.');
