@@ -10,7 +10,21 @@ import { createSessionWriter } from './writer';
 import { changeSession, emptySnapshot, parseSnapshot, startSession, type Snapshot } from './model';
 export { elapsed, restRemaining, type Session } from './model';
 
-type SessionsContext = { snapshot: Snapshot; start: (exerciseId: string) => Promise<string>; command: (id: string, action: 'set' | 'pause' | 'resume' | 'complete' | 'cancel' | 'skip-rest') => Promise<void> };
+type SessionsContext = {
+  snapshot: Snapshot;
+  start: (exerciseId: string) => Promise<string>;
+  command: (
+    id: string,
+    action: 'set' | 'pause' | 'resume' | 'complete' | 'cancel' | 'skip-rest',
+  ) => Promise<void>;
+  updateAiData: (
+    id: string,
+    data: {
+      repsCompleted?: number;
+      formFeedback?: string[];
+    },
+  ) => Promise<void>;
+};
 const Context = createContext<SessionsContext | null>(null);
 export function SessionsProvider({ children }: PropsWithChildren) {
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
@@ -99,8 +113,37 @@ export function SessionsProvider({ children }: PropsWithChildren) {
     return id;
   };
   const command: SessionsContext['command'] = async (id, action) => { await commit((previous) => changeSession(previous, id, action, Date.now())); };
+  const updateAiData: SessionsContext['updateAiData'] = async (id, data) => {
+  await commit((previous) => ({
+    ...previous,
+    sessions: previous.sessions.map((session) => {
+      if (
+        session.id !== id ||
+        (session.status !== 'active' && session.status !== 'paused')
+      ) {
+        return session;
+      }
+
+      return {
+        ...session,
+        workoutMode: 'camera-ai',
+        ...(data.repsCompleted !== undefined
+          ? { repsCompleted: data.repsCompleted }
+          : {}),
+        ...(data.formFeedback !== undefined
+          ? { formFeedback: data.formFeedback }
+          : {}),
+      };
+    }),
+  }));
+};
   if (!ready) return <Screen><AppText variant="title">{error ? 'Unable to open saved workouts' : 'Getting your training ready…'}</AppText>{error && <><AppText>{error}</AppText><Button label="Try again" onPress={() => { void load(); }} /></>}</Screen>;
-  return <Context.Provider value={{ snapshot, start, command }}>{children}</Context.Provider>;
+  return (
+  <Context.Provider value={{ snapshot, start, command, updateAiData }}>
+    {children}
+  </Context.Provider>
+);
 }
 export function useSessions() { const value = useContext(Context); if (!value) throw new Error('SessionsProvider is required.'); return value; }
 export { SessionScreen } from './ui/SessionScreen';
+export { CameraSessionScreen } from './ui/CameraSessionScreen';

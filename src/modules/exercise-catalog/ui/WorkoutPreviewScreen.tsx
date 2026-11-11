@@ -11,11 +11,16 @@ import { getExercise } from '../catalog';
 type Props = {
   exerciseId: string;
   onStart: (id: string) => void;
+  onStartWithCamera: (id: string) => void;
 };
 
-export function WorkoutPreviewScreen({ exerciseId, onStart }: Props) {
+export function WorkoutPreviewScreen({
+  exerciseId,
+  onStart,
+  onStartWithCamera,
+}: Props) {
   const exercise = getExercise(exerciseId);
-  const { start, command, snapshot } = useSessions();
+  const { start, command, snapshot, updateAiData } = useSessions();
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,24 +45,37 @@ export function WorkoutPreviewScreen({ exerciseId, onStart }: Props) {
   const hasDifferentActiveSession =
     !!activeSession && activeSession.exerciseId !== exercise.id;
 
-  // Bắt đầu hoặc tiếp tục buổi tập hiện tại.
-  const begin = async () => {
+  // MVP: Camera AI hiện hỗ trợ đếm squat.
+  const cameraAiSupported = exercise.id === 'bodyweight-squat';
+
+  const begin = async (useCamera: boolean) => {
     if (busy) return;
 
     setBusy(true);
     setError(null);
 
     try {
-      onStart(await start(exercise.id));
+      const sessionId = await start(exercise.id);
+
+      if (useCamera) {
+        await updateAiData(sessionId, {
+          repsCompleted: 0,
+          formFeedback: [],
+        });
+        onStartWithCamera(sessionId);
+      } else {
+        onStart(sessionId);
+      }
     } catch {
-      setError('Could not save your session. Check available device storage and try again.');
+      setError(
+        'Could not save your session. Check available device storage and try again.',
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  // Kết thúc buổi tập cũ rồi bắt đầu bài tập mới.
-  const replaceSession = async () => {
+  const replaceSession = async (useCamera: boolean) => {
     if (busy || !activeSession) return;
 
     setBusy(true);
@@ -68,11 +86,27 @@ export function WorkoutPreviewScreen({ exerciseId, onStart }: Props) {
 
       const newSessionId = await start(exercise.id);
 
-      onStart(newSessionId);
+      if (useCamera) {
+        await updateAiData(newSessionId, {
+          repsCompleted: 0,
+          formFeedback: [],
+        });
+        onStartWithCamera(newSessionId);
+      } else {
+        onStart(newSessionId);
+      }
     } catch {
       setError('Could not start this session. Please try again.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const startWorkout = (useCamera: boolean) => {
+    if (hasDifferentActiveSession) {
+      void replaceSession(useCamera);
+    } else {
+      void begin(useCamera);
     }
   };
 
@@ -158,7 +192,7 @@ export function WorkoutPreviewScreen({ exerciseId, onStart }: Props) {
       <Button
         label={
           busy
-            ? 'Saving…'
+            ? 'Saving...'
             : hasDifferentActiveSession
               ? `End current session and start ${exercise.name}`
               : activeSession
@@ -166,17 +200,24 @@ export function WorkoutPreviewScreen({ exerciseId, onStart }: Props) {
                 : 'Start session'
         }
         disabled={busy}
-        onPress={() => {
-          void (
-            hasDifferentActiveSession
-              ? replaceSession()
-              : begin()
-          );
-        }}
+        onPress={() => startWorkout(false)}
       />
 
+      <View style={styles.cameraButton}>
+        <Button
+          label={
+            cameraAiSupported
+              ? 'Start session with Camera AI'
+              : 'Camera AI not available for this exercise yet'
+          }
+          disabled={busy || !cameraAiSupported}
+          onPress={() => startWorkout(true)}
+        />
+      </View>
+
       <AppText variant="caption" tone="secondary" style={styles.foot}>
-        No camera required · Self-reported activity · Saved on device
+        Timer mode works without a camera. Camera AI currently supports
+        Bodyweight Squat only.
       </AppText>
     </Screen>
   );
@@ -243,6 +284,9 @@ const styles = StyleSheet.create({
   },
   error: {
     marginBottom: 16,
+  },
+  cameraButton: {
+    marginTop: 12,
   },
   foot: {
     marginTop: 16,
