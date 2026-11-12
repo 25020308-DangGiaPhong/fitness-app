@@ -10,14 +10,52 @@ import { AppText, Button, colors, Screen } from '@/ui';
 import { useSessions } from '../index';
 import { elapsed, restRemaining } from '../model';
 
+// Map exercise IDs to their GIF files.
+const exerciseAnimations: Record<string, number> = {
+  // STRENGTH
+  'bodyweight-squat': require('../../../../assets/workout/squat-animation.gif'),
+  'wall-push-up': require('../../../../assets/workout/wall_push_up.gif'),
+  'glute-bridge': require('../../../../assets/workout/glute_bridge.gif'),
+  'calf-raise': require('../../../../assets/workout/calf_raise.gif'),
+
+  // MOBILITY
+  'shoulder-roll': require('../../../../assets/workout/shoulder_rolls.gif'),
+  'ankle-circle': require('../../../../assets/workout/ankle_circles.gif'),
+  'wall-slide': require('../../../../assets/workout/wall_slides.gif'),
+  'bird-dog': require('../../../../assets/workout/bird_dog.gif'),
+  'cat-cow': require('../../../../assets/workout/cat_cow.gif'),
+  'seated-knee-extension': require('../../../../assets/workout/seated_knee_extension.gif'),
+  'chin-tuck': require('../../../../assets/workout/chin_tucks.gif'),
+  'neck-turn': require('../../../../assets/workout/gentle_neck_turns.gif'),
+  'seated-thoracic-rotation': require('../../../../assets/workout/seated_upper_back_rotation.gif'),
+  'pelvic-tilt': require('../../../../assets/workout/supine_pelvic_tilts.gif'),
+  'wrist-circle': require('../../../../assets/workout/wrist_circles.gif'),
+  'wrist-flexion-extension': require('../../../../assets/workout/wrist_bends.gif'),
+  'doorway-chest-stretch': require('../../../../assets/workout/doorway_chest_stretch.gif'),
+  'standing-chest-opener': require('../../../../assets/workout/standing_chest_opener.gif'),
+  'dead-bug': require('../../../../assets/workout/dead_bug.gif'),
+  'standing-hip-circle': require('../../../../assets/workout/standing_hip_circles.gif'),
+  'seated-hip-march': require('../../../../assets/workout/seated_hip_march.gif'),
+  'seated-heel-slide': require('../../../../assets/workout/seated_heel_slides.gif'),
+  'seated-hamstring-stretch': require('../../../../assets/workout/seated_hamstring_stretch.gif'),
+  'standing-hamstring-stretch': require('../../../../assets/workout/standing_hamstring_stretch.gif'),
+  'wall-calf-stretch': require('../../../../assets/workout/wall_calf_stretch.gif'),
+  'seated-heel-raise': require('../../../../assets/workout/seated_heel_raises.gif'),
+  'ankle-rock': require('../../../../assets/workout/standing_ankle_rocks.gif'),
+
+  // CARDIO
+  'standing-march': require('../../../../assets/workout/standing_march.gif'),
+  'side-step': require('../../../../assets/workout/side_steps.gif'),
+  'step-touch': require('../../../../assets/workout/step_touch.gif'),
+  'alternating-toe-taps': require('../../../../assets/workout/alternating_toe_taps.gif'),
+};
+
 function clock(ms: number) {
   const seconds = Math.floor(ms / 1000);
 
-  return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(
-    seconds % 60
-  )
+  return `${Math.floor(seconds / 60)
     .toString()
-    .padStart(2, '0')}`;
+    .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 }
 
 type Props = {
@@ -33,14 +71,11 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
 
   const [now, setNow] = useState(Date.now);
   const [busy, setBusy] = useState(false);
+  const lock = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const lock = useRef(false);
-
   useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(Date.now());
-    }, 500);
+    const timer = setInterval(() => setNow(Date.now()), 500);
 
     return () => clearInterval(timer);
   }, []);
@@ -89,11 +124,9 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
     return (
       <Screen hasNavigationHeader>
         <AppText variant="title">Session ended</AppText>
-
         <AppText tone="secondary">
           This session was not added to your completed workouts.
         </AppText>
-
         <Button label="Back to Train" onPress={onTrain} />
       </Screen>
     );
@@ -119,7 +152,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
           </AppText>
 
           <AppText tone="secondary" style={styles.center}>
-            That&apos;s how momentum starts. Nice work.
+            That's how momentum starts. Nice work.
           </AppText>
         </View>
 
@@ -128,9 +161,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
 
           <View style={styles.summaryStats}>
             <View style={styles.summaryItem}>
-              <AppText variant="title">
-                {clock(elapsed(session))}
-              </AppText>
+              <AppText variant="title">{clock(elapsed(session))}</AppText>
               <AppText tone="secondary">session time</AppText>
             </View>
 
@@ -159,27 +190,13 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
   const allDone = session.setsDone >= session.totalSets;
   const paused = session.status === 'paused';
 
-  // GIF chỉ dành riêng cho Bodyweight Squat.
-  const isBodyweightSquat = exercise.id === 'bodyweight-squat';
+  const animation = exerciseAnimations[exercise.id];
 
   return (
     <Screen hasNavigationHeader>
       <AppText variant="label" style={styles.accent}>
         YOUR SESSION · {paused ? 'PAUSED' : resting > 0 ? 'RECOVER' : "LET'S MOVE"}
       </AppText>
-
-      {/* Chỉ Bodyweight Squat mới có GIF */}
-      {isBodyweightSquat && (
-        <View style={styles.animationContainer}>
-          <ExpoImage
-            source={require('../../../../assets/workout/squat-animation.gif')}
-            style={styles.animation}
-            contentFit="contain"
-            autoplay
-            accessibilityLabel="Bodyweight Squat exercise animation"
-          />
-        </View>
-      )}
 
       <AppText variant="title" style={styles.title}>
         {exercise.name}
@@ -189,6 +206,20 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         {exercise.focus} · {exercise.reps} per set
       </AppText>
 
+      {/* EXERCISE ANIMATION */}
+      {animation !== undefined && (
+        <View style={styles.animationContainer}>
+          <ExpoImage
+            source={animation}
+            style={styles.animation}
+            contentFit="contain"
+            autoplay
+            accessibilityLabel={`${exercise.name} animation`}
+          />
+        </View>
+      )}
+
+      {/* SESSION TIMER */}
       <View style={styles.timerCard}>
         <AppText variant="label" tone="secondary">
           {paused ? 'PAUSED TIME' : 'SESSION TIME'}
@@ -220,6 +251,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         </AppText>
       </View>
 
+      {/* SET INFORMATION */}
       <View style={styles.card}>
         <View style={styles.row}>
           <Ionicons
@@ -247,9 +279,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         </AppText>
 
         {resting > 0 && (
-          <AppText style={styles.restTime}>
-            {clock(resting)}
-          </AppText>
+          <AppText style={styles.restTime}>{clock(resting)}</AppText>
         )}
 
         {!allDone && (
@@ -283,6 +313,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         )}
       </View>
 
+      {/* PAUSE / RESUME */}
       <Button
         label={paused ? 'Resume session' : 'Pause session'}
         disabled={busy}
@@ -303,6 +334,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         to take a break.
       </AppText>
 
+      {/* END SESSION */}
       <View style={styles.gap}>
         <Button
           label="End without completing"
@@ -345,11 +377,11 @@ const styles = StyleSheet.create({
   animationContainer: {
     width: '100%',
     height: 240,
-    backgroundColor: colors.accentSurface,
+    backgroundColor: colors.surface,
     borderRadius: 20,
-    marginTop: 16,
-    marginBottom: 12,
     overflow: 'hidden',
+    marginTop: 20,
+    marginBottom: 8,
   },
 
   animation: {
@@ -450,5 +482,3 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 });
-
-
