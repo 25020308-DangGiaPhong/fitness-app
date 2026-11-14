@@ -1,22 +1,22 @@
 
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
-import { useSessions } from '@/modules/workout-sessions';
-import { AppText, Button, colors, Screen } from '@/ui';
+import { isCameraAiAvailable, useSessions } from '@/modules/workout-sessions';
+import { AppText, Button, colors, Screen, TargetPicker } from '@/ui';
 
 import { getExercise } from '../catalog';
-import { TargetPicker } from './TargetPicker';
+import { exerciseImages } from '../exerciseImages';
 
 type Props = {
   suggestedSets?: string;
   suggestedAmount?: string;
   exerciseId: string;
   onStart: (id: string) => void;
+  onStartWithCamera?: (id: string) => void;
 };
 
-export function WorkoutPreviewScreen({ exerciseId, onStart, suggestedSets, suggestedAmount }: Props) {
+export function WorkoutPreviewScreen({ exerciseId, onStart, onStartWithCamera, suggestedSets, suggestedAmount }: Props) {
   const exercise = getExercise(exerciseId);
   const { start, command, snapshot } = useSessions();
 
@@ -52,14 +52,20 @@ export function WorkoutPreviewScreen({ exerciseId, onStart, suggestedSets, sugge
   const displayedRest = resuming ? activeSession.restMs / 1000 : rest;
 
   // Bắt đầu hoặc tiếp tục buổi tập hiện tại.
-  const begin = async () => {
+  const begin = async (useCamera = false) => {
     if (busy) return;
 
     setBusy(true);
     setError(null);
 
     try {
-      onStart(await start(exercise.id, { sets, amount, restSeconds: rest }));
+      if (useCamera && !isCameraAiAvailable()) {
+        setError('Camera AI needs a development build with MediaPipe. Regular workouts and AI Coach are available in Expo Go.');
+        return;
+      }
+      const sessionId = await start(exercise.id, { sets, amount, restSeconds: rest, workoutMode: useCamera ? 'camera-ai' : 'timer' });
+      if ((resuming ? activeSession.workoutMode === 'camera-ai' : useCamera) && onStartWithCamera) onStartWithCamera(sessionId);
+      else onStart(sessionId);
     } catch {
       setError('Could not save your session. Check available device storage and try again.');
     } finally {
@@ -68,18 +74,23 @@ export function WorkoutPreviewScreen({ exerciseId, onStart, suggestedSets, sugge
   };
 
   // Kết thúc buổi tập cũ rồi bắt đầu bài tập mới.
-  const replaceSession = async () => {
+  const replaceSession = async (useCamera = false) => {
     if (busy || !activeSession) return;
 
     setBusy(true);
     setError(null);
 
     try {
+      if (useCamera && !isCameraAiAvailable()) {
+        setError('Camera AI needs a development build with MediaPipe. Your current session is unchanged.');
+        return;
+      }
       await command(activeSession.id, 'cancel');
 
-      const newSessionId = await start(exercise.id, { sets, amount, restSeconds: rest });
+      const newSessionId = await start(exercise.id, { sets, amount, restSeconds: rest, workoutMode: useCamera ? 'camera-ai' : 'timer' });
 
-      onStart(newSessionId);
+      if (useCamera && onStartWithCamera) onStartWithCamera(newSessionId);
+      else onStart(newSessionId);
     } catch {
       setError('Could not start this session. Please try again.');
     } finally {
@@ -90,16 +101,12 @@ export function WorkoutPreviewScreen({ exerciseId, onStart, suggestedSets, sugge
   return (
     <Screen hasNavigationHeader>
       <View style={styles.art}>
-        <Ionicons
-          name={exercise.icon}
-          size={80}
-          color={colors.action}
-          accessible={false}
+        <Image
+          source={exerciseImages[exercise.id]}
+          style={styles.exerciseImage}
+          resizeMode="contain"
+          accessibilityLabel={exercise.name}
         />
-
-        <AppText variant="label" style={styles.tag}>
-          {exercise.group.toUpperCase()} · BEGINNER
-        </AppText>
       </View>
 
       <AppText variant="screenTitle" style={styles.title}>
@@ -209,6 +216,13 @@ export function WorkoutPreviewScreen({ exerciseId, onStart, suggestedSets, sugge
         }}
       />
 
+      {exercise.id === 'bodyweight-squat' && !resuming && onStartWithCamera && <View style={styles.cameraButton}>
+        <Button label="Start session with Camera AI" disabled={busy} onPress={() => {
+          void (hasDifferentActiveSession ? replaceSession(true) : begin(true));
+        }} />
+        <AppText variant="caption" tone="secondary">Squat rep estimates · Development build required</AppText>
+      </View>}
+
       <AppText variant="caption" tone="secondary" style={styles.foot}>
         No camera required · Self-reported activity · Saved on device
       </AppText>
@@ -221,9 +235,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: colors.accentSurface,
     alignItems: 'center',
-    padding: 32,
-    gap: 20,
+    overflow: 'hidden',
   },
+  exerciseImage: { width: '100%', height: 240 },
   tag: {
     color: colors.action,
   },
@@ -282,6 +296,7 @@ const styles = StyleSheet.create({
   error: {
     marginBottom: 16,
   },
+  cameraButton: { marginTop: 12, gap: 8 },
   foot: {
     marginTop: 16,
     textAlign: 'center',

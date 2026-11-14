@@ -3,3 +3,5 @@ export { Button } from './Button';
 export { Screen } from './Screen';
 export { colors, radii, spacing, typography } from './tokens';
 export { useReducedMotion } from './useReducedMotion';
+
+export { TargetPicker } from './TargetPicker';

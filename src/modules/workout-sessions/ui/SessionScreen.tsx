@@ -2,12 +2,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { getExercise } from '@/modules/exercise-catalog';
 import { AppText, Button, colors, Screen } from '@/ui';
 
 import { useSessions } from '../index';
+import { CameraSessionScreen } from './CameraSessionScreen';
+import { PausedSessionTargets } from './PausedSessionTargets';
 import { elapsed, restRemaining } from '../model';
 
 // Map exercise IDs to their GIF files.
@@ -72,6 +74,8 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
   const [now, setNow] = useState(Date.now);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
+  const [editing, setEditing] = useState<'sets' | 'amount' | null>(null);
+  const [coachOpen, setCoachOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,6 +93,8 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
 
     try {
       await command(id, action);
+      setEditing(null);
+      setCoachOpen(false);
       setNow(Date.now());
     } catch {
       setError(
@@ -101,7 +107,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
   };
 
   const changeVolume = async (sets: number, amount: number) => {
-    if (lock.current) return;
+    if (lock.current || session?.status !== 'paused') return;
     lock.current = true; setBusy(true); setError(null);
     try { await adjust(id, sets, amount); }
     catch { setError('Could not save that change. Please try again.'); }
@@ -114,6 +120,10 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         <Button label="Back to Train" onPress={onTrain} />
       </Screen>
     );
+  }
+
+  if (session.workoutMode === 'camera-ai') {
+    return <CameraSessionScreen id={id} onProgress={onProgress} onTrain={onTrain} />;
   }
 
   const exercise = getExercise(session.exerciseId);
@@ -220,7 +230,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
             source={animation}
             style={styles.animation}
             contentFit="contain"
-            autoplay
+            autoplay={!paused}
             accessibilityLabel={`${exercise.name} animation`}
           />
         </View>
@@ -289,7 +299,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
           <AppText style={styles.restTime}>{clock(resting)}</AppText>
         )}
 
-        {!allDone && (
+        {!allDone && !paused && (
           <Button
             label={busy ? 'Saving...' : 'Mark set complete'}
             disabled={busy || paused || resting > 0}
@@ -320,17 +330,6 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         )}
       </View>
 
-      {!allDone && <View style={{ gap: 8, marginVertical: 16 }}>
-        <AppText variant="heading">Adjust your pace</AppText>
-        <AppText tone="secondary">A lighter session or stopping early is okay. Only sets you marked complete are saved.</AppText>
-        <Button label="Fewer remaining sets" disabled={busy || session.totalSets <= Math.max(1, session.setsDone)} onPress={() => void changeVolume(session.totalSets - 1, session.targetAmount ?? Number.parseInt(exercise.reps, 10))} />
-        <Button label="More sets" disabled={busy || session.totalSets >= 5} onPress={() => void changeVolume(session.totalSets + 1, session.targetAmount ?? Number.parseInt(exercise.reps, 10))} />
-        <Button label="Less per remaining set" disabled={busy || (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) <= 1} onPress={() => void changeVolume(session.totalSets, (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) - 1)} />
-        <Button label="More per remaining set" disabled={busy || (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) >= 60} onPress={() => void changeVolume(session.totalSets, (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) + 1)} />
-        <Button label="Finish early" disabled={busy} onPress={() => Alert.alert('Finish for today?', 'Save only completed sets. With no completed sets, this session is cancelled.', [
-          { text: 'Keep training', style: 'cancel' }, { text: 'Finish for today', onPress: () => void act('finish-early') },
-        ])} />
-      </View>}
       {/* PAUSE / RESUME */}
       <Button
         label={paused ? 'Resume session' : 'Pause session'}
@@ -340,6 +339,15 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         }}
       />
 
+      {paused && !allDone && <View style={styles.pausedControls}>
+        <PausedSessionTargets session={session} busy={busy} editing={editing} onEditingChange={setEditing}
+          coachOpen={coachOpen} onCoachToggle={() => setCoachOpen(!coachOpen)} onAdjust={changeVolume} />
+        <Pressable accessibilityRole="button" disabled={busy} style={styles.textAction} onPress={() => Alert.alert(
+          'Finish for today?', 'Save only completed sets. With no completed sets, this session is cancelled.', [
+            { text: 'Keep paused', style: 'cancel' }, { text: 'Finish for today', onPress: () => void act('finish-early') },
+          ])}><AppText style={styles.accent}>Finish early</AppText></Pressable>
+      </View>}
+
       {error && (
         <AppText accessibilityRole="alert" style={styles.error}>
           {error}
@@ -347,13 +355,11 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
       )}
 
       <AppText variant="caption" tone="secondary" style={styles.hint}>
-        Your sets are saved as you go. Leaving this screen keeps the session
-        available in Train. Running timers continue in the background; pause
-        to take a break.
+        {paused ? 'Your session stays paused while you make changes.' : 'Pause to take a break or adjust your targets.'}
       </AppText>
 
       {/* END SESSION */}
-      <View style={styles.gap}>
+      {paused && <View style={styles.gap}>
         <Button
           label="End without completing"
           disabled={busy}
@@ -377,12 +383,14 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
             )
           }
         />
-      </View>
+      </View>}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  pausedControls: { gap: 12, marginTop: 24 },
+  textAction: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   accent: {
     color: colors.action,
   },

@@ -37,7 +37,8 @@ module.exports = {
           if (!parts || !parts[0]) return;
           const isCatalogData = target === path.join(modulesRoot, 'exercise-catalog', 'catalog');
           const isCoachApi = target === path.join(modulesRoot, 'ai-coach', 'server') &&
-            importer === path.resolve(sourceRoot, '../app/api/coach+api.ts');
+            ['coach+api.ts', 'session-coach+api.ts'].some((route) =>
+              importer === path.resolve(sourceRoot, '../app/api', route));
 
           if (importer.startsWith(path.join(sourceRoot, 'ui') + path.sep)) {
             context.report({ node: source, messageId: 'sharedImport' });

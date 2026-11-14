@@ -115,7 +115,8 @@ test('Custom volume persists, validates input and never changes an existing sess
 test('Volume edits serialize with completed sets; finish early preserves actual work', async () => {
   const { adjustVolume } = await import('../src/modules/workout-sessions/model.ts');
   const first = changeSession(initial(), 'session-1', 'set', 2000);
-  const lighter = adjustVolume(first, 'session-1', 1, 4);
+  const paused = changeSession(first, 'session-1', 'pause', 2500);
+  const lighter = adjustVolume(paused, 'session-1', 1, 4);
   assert.equal(lighter.sessions[0].setsDone, 1);
   assert.equal(lighter.sessions[0].targetAmount, 4);
   assert.equal(restRemaining(lighter.sessions[0], 2000), 0);
@@ -137,11 +138,30 @@ test('Queued edits cannot erase a completed set; failed edits leave the publishe
   await write((previous) => changeSession(previous, 'session-1', 'set', 2000));
   const second = write((previous) => changeSession(previous, 'session-1', 'skip-rest', 3000));
   const third = write((previous) => changeSession(previous, 'session-1', 'set', 4000));
+  const pause = write((previous) => changeSession(previous, 'session-1', 'pause', 4500));
   const edit = write((previous) => adjustVolume(previous, 'session-1', 1, 4));
   const rejected = assert.rejects(edit, /Completed sets/);
-  await Promise.all([second, third, rejected]);
+  await Promise.all([second, third, pause, rejected]);
   assert.equal(snapshot.sessions[0].setsDone, 2);
   fail = true;
   await assert.rejects(write((previous) => adjustVolume(previous, 'session-1', 3, 4)), /disk full/);
   assert.equal(snapshot.sessions[0].totalSets, 2);
+});
+
+
+test('Targets can only change while paused, including queued AI edits arriving after resume', async () => {
+  const { adjustVolume } = await import('../src/modules/workout-sessions/model.ts');
+  let snapshot = initial();
+  assert.throws(() => adjustVolume(snapshot, 'session-1', 3, 8), /Pause/);
+  const write = createSessionWriter(() => snapshot, async () => {}, (next) => { snapshot = next; });
+  await write((previous) => changeSession(previous, 'session-1', 'pause', 2000));
+  await write((previous) => adjustVolume(previous, 'session-1', 3, 8));
+  assert.equal(snapshot.sessions[0].targetAmount, 8);
+  const restBefore = restRemaining(snapshot.sessions[0], 2000);
+  assert.equal(restRemaining(snapshot.sessions[0], 50000), restBefore);
+  const resume = write((previous) => changeSession(previous, 'session-1', 'resume', 50000));
+  const stale = write((previous) => adjustVolume(previous, 'session-1', 2, 4));
+  await Promise.all([resume, assert.rejects(stale, /Pause/)]);
+  assert.equal(snapshot.sessions[0].totalSets, 3);
+  assert.equal(snapshot.sessions[0].status, 'active');
 });

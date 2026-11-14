@@ -8,7 +8,7 @@ export default function WorkoutRoute() {
   return (
     <>
       <Stack.Screen options={{ headerBackTitle: from === 'coach' ? 'AI Coach' : 'Train' }} />
-      <WorkoutPreviewScreen suggestedSets={sets} suggestedAmount={amount} exerciseId={exerciseId ?? 'bodyweight-squat'} onStart={(id) => router.replace({ pathname: '/session', params: from === 'coach' ? { id, from } : { id } })} />
+      <WorkoutPreviewScreen suggestedSets={sets} suggestedAmount={amount} exerciseId={exerciseId ?? 'bodyweight-squat'} onStartWithCamera={(id) => router.replace({ pathname: '/camera-session', params: from === 'coach' ? { id, from } : { id } })} onStart={(id) => router.replace({ pathname: '/session', params: from === 'coach' ? { id, from } : { id } })} />
     </>
   );
 }

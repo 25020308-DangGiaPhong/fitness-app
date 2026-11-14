@@ -17,7 +17,14 @@
       "supportsTablet": false
     },
     "android": {
-      "predictiveBackGestureEnabled": true
+      "predictiveBackGestureEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.sontobe.fitnessapp",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -27,7 +34,15 @@
           "backgroundColor": "#F5F3F0"
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow camera access for on-device pose tracking.",
+          "recordAudioAndroid": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

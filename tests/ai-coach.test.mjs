@@ -474,3 +474,54 @@ test('Volume edits understand quantities after the unit and absolute reductions'
   assert.equal(mobility.editTargets('đổi reps lên 12', targets).targets[0].amount, 12);
   assert.equal(mobility.editTargets('giảm xuống 2 set', targets).targets[0].sets, 2);
 });
+
+const sessionAdjustment = load('src/modules/ai-coach/sessionAdjustment.ts', (name) => ({
+  '@/modules/exercise-catalog/catalog': catalog, './model': model, './mobility': mobility,
+})[name]);
+
+test('Paused session requests and proposals validate counts, bounds, and existing exercises', () => {
+  const input = { text: 'lighter please', exerciseId: 'bodyweight-squat', sets: 3, amount: 10, setsDone: 2 };
+  assert.ok(sessionAdjustment.readSessionAdjustment(input));
+  for (const bad of [{ ...input, setsDone: 4 }, { ...input, sets: 6 }, { ...input, amount: 0 }, { ...input, exerciseId: 'fake' }, { ...input, text: '' }]) {
+    assert.equal(sessionAdjustment.readSessionAdjustment(bad), undefined);
+  }
+  assert.equal(sessionAdjustment.readSessionAdjustmentReply({ message: 'Try this', target: { sets: 1, amount: 5 } }, input), undefined);
+  assert.equal(sessionAdjustment.readSessionAdjustmentReply({ message: 'Try this', target: { sets: 3, amount: 61 } }, input), undefined);
+  assert.equal(sessionAdjustment.readSessionAdjustmentReply({ message: 'Try this', target: { sets: 2, amount: 6 } }, input).target.amount, 6);
+  assert.equal(sessionAdjustment.localSessionAdjustment({ ...input, text: 'Tôi muốn 2 set và 8 reps' }).target.amount, 8);
+  assert.equal(sessionAdjustment.localSessionAdjustment({ ...input, text: '1 set' }).target, undefined);
+  for (const text of ['My knee hurts, change to 2 sets', 'I want to rest today']) {
+    assert.equal(sessionAdjustment.localSessionAdjustment({ ...input, text }).target, undefined);
+  }
+  const timed = { ...input, exerciseId: 'wall-calf-stretch', text: '12 reps' };
+  assert.equal(sessionAdjustment.localSessionAdjustment(timed).target, undefined);
+});
+
+test('Paused session endpoint rejects bad provider targets and passes only the current exercise context', async () => {
+  let proposed = { sets: 2, amount: 5 };
+  let calls = 0;
+  const server = load('src/modules/ai-coach/sessionAdjustmentServer.ts', (name) => ({
+    '@/modules/exercise-catalog/catalog': catalog, './sessionAdjustment': sessionAdjustment,
+  })[name], {
+    Request, Response, AbortSignal, process: { env: { GROQ_API_KEY: 'test-placeholder' } },
+    fetch: async (_url, options) => {
+      calls++;
+      const body = JSON.parse(options.body);
+      assert.match(body.messages[0].content, /Bodyweight Squat/);
+      assert.match(body.messages[0].content, /TOTAL sets/);
+      return Response.json({ choices: [{ message: { content: JSON.stringify({ message: 'A lighter target to review.', target: proposed }) } }] });
+    },
+  });
+  const input = { text: 'Make this lighter please', exerciseId: 'bodyweight-squat', sets: 3, amount: 10, setsDone: 2 };
+  const send = (body) => server.postSessionAdjustment(new Request('http://localhost/api/session-coach', { method: 'POST', body: JSON.stringify(body) }));
+  assert.equal((await send({ ...input, setsDone: -1 })).status, 400);
+  assert.equal((await send({ ...input, text: 'My knee hurts' })).status, 200);
+  assert.equal(calls, 0);
+  const response = await send(input);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).target.sets, 2);
+  proposed = { sets: 1, amount: 5 };
+  assert.equal((await send(input)).status, 503);
+  proposed = { sets: 2, amount: 200 };
+  assert.equal((await send(input)).status, 503);
+});

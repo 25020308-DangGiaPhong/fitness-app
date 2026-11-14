@@ -71,6 +71,7 @@ function AuthGuard() {
         name="workout"
         options={{ title: 'Workout', headerBackTitle: 'Train' }}
       />
+      <Stack.Screen name="camera-session" options={{ title: 'Camera AI Workout', headerBackTitle: 'Workout' }} />
       <Stack.Screen
         name="session"
         options={{ title: 'Your session', headerBackTitle: 'Train' }}

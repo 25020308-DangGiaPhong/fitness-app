@@ -38,6 +38,9 @@ export async function syncCompletedSession(
           ended_early: session.endedEarly ?? false,
           total_sets: session.totalSets,
           rest_seconds: session.restMs / 1000,
+          workout_mode: session.workoutMode ?? 'timer',
+          reps_completed: session.repsCompleted ?? 0,
+          form_feedback: session.formFeedback ?? [],
         },
       },
       {
@@ -62,6 +65,11 @@ export type CloudWorkout = {
     sets_completed?: number;
     total_sets?: number;
     rest_seconds?: number;
+    target_amount?: number;
+    ended_early?: boolean;
+    workout_mode?: 'timer' | 'camera-ai';
+    reps_completed?: number;
+    form_feedback?: string[];
   } | null;
 };
 

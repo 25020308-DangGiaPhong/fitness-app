@@ -2,7 +2,9 @@ import { useRef, useState, type ComponentRef } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppText, colors, radii, spacing, useReducedMotion } from '@/ui';
+import { AppText } from './AppText';
+import { colors, radii, spacing } from './tokens';
+import { useReducedMotion } from './useReducedMotion';
 
 type Props = {
   title: string;

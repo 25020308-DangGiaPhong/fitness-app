@@ -1,5 +1,7 @@
 # Hướng dẫn phát triển và bàn giao module Camera AI
 
+**Cập nhật 14/11/2026:** Camera AI Squat đã có source, được khôi phục từ FitMeal4293869 và ghép Coach/Pause mới. Cần development build có expo-mediapipe-pose0.4.0; chưa xác minh native build hoặc camera thật của bản ghép. Xem README và progress cho trạng thái hiện tại. Phần dưới là tài liệu đề xuất lịch sử ngày08/11, không phải mô tả implementation hiện tại.
+
 Ngày soạn: 08/11/2026. Dự án: Fitness App — React Native + Expo + TypeScript.
 
 Tài liệu này dùng để gửi cho người phát triển trên máy khác. Đây là yêu cầu triển khai thử nghiệm và hợp đồng tích hợp đề xuất; chưa có module camera hoặc kết quả kiểm thử để bàn giao. Không yêu cầu build trên máy đang giữ app chính.

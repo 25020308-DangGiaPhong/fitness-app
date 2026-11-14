@@ -79,3 +79,15 @@ Chạm các ô set, lượng mỗi hiệp và rest ở đầu màn Workout để
 ## Resolve PR #4: AI Coach → FitMeal — 2026-11-14
 
 Người dùng yêu cầu xử lý conflict giữa feature/ai-coach và feature/fitmeal-integration. Ghép nhánh FitMeal vào nhánh nguồn AI Coach để cập nhật PR, giữ nguyên tính năng FitMeal/Profile của nhánh đích và code Coach hiện tại. Chọn Expo exact58.0.25 từ nhánh FitMeal; giữ expo-dev-client mới thêm, scripts chỉ định --go để giữ đường Expo Go. Không khôi phục expo-camera/expo-mediapipe-pose vì camera AI đã được yêu cầu gỡ và FitMeal không import hai package này. Tái tạo lockfile bằng npm từ manifest đã resolve, không ghép thủ công version/integrity. Không đổi data owner hoặc tự merge PR vào nhánh đích.
+
+## Chỉnh mục tiêu chỉ trong Pause và ảnh chi tiết — 2026-11-14
+
+Người dùng yêu cầu gỡ cụm nút chỉnh mục tiêu khỏi màn đang tập. Chỉ trạng thái paused được chỉnh set/amount, bằng bộ cuộn số hoặc Ask AI Coach → review → Apply; không cho AI tự đổi/resume phiên. AI Coach chỉ đề xuất cho exerciseId hiện tại, workout-sessions ghi qua writer với điều kiện paused và không giảm dưới setsDone. Rule mới thay phần cho phép chỉnh khi active ở quyết định 13/11; chat Pause được triển khai trong lượt này, voice chưa có. Dùng ảnh đại diện cùng nguồn Train cho header màn Workout thay biểu tượng tạ. TargetPicker chuyển về shared UI vì cả preview và session dùng; không đổi ownership nghiệp vụ hoặc schema storage.
+
+## Khôi phục Camera AI cùng Coach mới — 2026-11-14
+
+Người dùng xác nhận muốn giữ đồng thời Camera AI và toàn bộ nâng cấp Coach. Quyết định này thay yêu cầu gỡ camera trước đây cho bản hiện tại. Khôi phục route/nội dung camera từ FitMeal4293869, ghép lại contract session/cloud với targetAmount/endedEarly và UI Pause/ảnh bài tập mới, không rollback nhánh hoặc ghi đè thay đổi local.
+
+Camera chỉ hỗ trợ Squat như bản cũ. Native MediaPipe được lazy-load sau kiểm tra availability; Expo Go vẫn chạy phần thường và báo rõ camera cần development build. Giữ Expo58.0.25, exact camera58.0.14/pose0.4.0 và dev-client; thêm scripts build:ios/build:android/start:dev, giữ scripts Expo Go. Node24+ vì pose package yêu cầu. Không nâng host, không tự ký/phân phối build, không upload video.
+
+Workout-sessions tiếp tục là owner ghi dữ liệu; Camera chỉ gửi metadata qua writer. Counter không ghi khi paused/terminal, không cho giảm rep; Pause mới chỉnh mục tiêu bằng manual/Coach và Apply có chủ đích. Camera completion không giả số hiệp; snapshot schemaVersion1 cũ vẫn đọc được. Khôi phục source không đồng nghĩa đã kiểm chứng native build hoặc độ chính xác camera.

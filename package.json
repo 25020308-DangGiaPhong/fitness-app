@@ -7,6 +7,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.119.0",
     "expo": "58.0.25",
+    "expo-camera": "58.0.14",
     "expo-constants": "~58.0.15",
     "expo-dev-client": "~58.0.20",
     "expo-file-system": "~58.0.13",
@@ -14,6 +15,7 @@
     "expo-image": "~58.0.18",
     "expo-image-picker": "~58.0.10",
     "expo-linking": "~58.0.16",
+    "expo-mediapipe-pose": "0.4.0",
     "expo-router": "~58.0.30",
     "expo-splash-screen": "~58.0.13",
     "expo-status-bar": "~58.0.4",
@@ -41,10 +43,13 @@
     "ios": "expo start --go --ios",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "start:dev": "expo start --dev-client",
+    "build:ios": "expo run:ios",
+    "build:android": "expo run:android"
   },
   "engines": {
-    "node": "^22.13.0 || ^24.3.0 || >=26.0.0"
+    "node": "^24.3.0 || >=26.0.0"
   },
   "packageManager": "npm@11.19.0",
   "private": true

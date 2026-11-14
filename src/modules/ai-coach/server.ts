@@ -118,3 +118,5 @@ export async function postCoach(request: Request): Promise<Response> {
     return Response.json({ error: timedOut ? 'timeout' : 'provider_error' }, { status: 503 });
   }
 }
+
+export { postSessionAdjustment } from './sessionAdjustmentServer';

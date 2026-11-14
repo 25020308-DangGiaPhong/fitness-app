@@ -1,5 +1,6 @@
 // src/modules/ai-coach/index.ts
 export { CoachScreen } from './ui/CoachScreen';
+export { PausedSessionCoach } from './ui/PausedSessionCoach';
 export type { CoachScreenProps } from './ui/CoachScreen';
 export { requestGuidance, resolveCatalogExercise } from './preview';
 export type {
