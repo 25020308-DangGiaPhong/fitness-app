@@ -10,6 +10,7 @@ import { useIsFocused } from 'expo-router';
 import {
   AppState,
   Alert,
+  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
@@ -56,6 +57,7 @@ export function CameraSessionScreen({
   const [editing, setEditing] = useState<'sets' | 'amount' | null>(null);
   const [coachOpen, setCoachOpen] = useState(false);
   const [angle, setAngle] = useState<number | null>(null);
+  const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
   const [feedback, setFeedback] = useState(
     'Stand upright and position your full body in the camera.',
   );
@@ -71,6 +73,16 @@ export function CameraSessionScreen({
     phase.current = 'standing';
   }, [reps, session?.status]);
   const lock = useRef(false);
+
+  const switchCamera = () => {
+    phase.current = 'standing';
+    lastRepAt.current = Date.now();
+    setAngle(null);
+    setFeedback('Camera switched. Stand upright to begin.');
+    setCameraFacing((current) =>
+      current === 'back' ? 'front' : 'back',
+    );
+  };
 
   const isFocused = useIsFocused();
   const [appState, setAppState] = useState(AppState.currentState);
@@ -381,7 +393,7 @@ export function CameraSessionScreen({
         <PoseCameraView
           style={styles.camera}
           isActive={cameraActive}
-          cameraFacing="back"
+          cameraFacing={cameraFacing}
           previewFps={30}
           callbackFps={15}
           frameLimit={30}
@@ -405,6 +417,28 @@ export function CameraSessionScreen({
             </AppText>
           </View>
         )}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            cameraFacing === 'back'
+              ? 'Switch to front camera'
+              : 'Switch to back camera'
+          }
+          accessibilityHint="Changes the camera used for pose detection."
+          onPress={switchCamera}
+          style={({ pressed }) => [
+            styles.cameraToggle,
+            pressed && styles.cameraTogglePressed,
+          ]}
+        >
+          <Ionicons
+            name="camera-reverse-outline"
+            size={24}
+            color={colors.textPrimary}
+            accessible={false}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.stats}>
@@ -529,6 +563,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.65)',
+  },
+  cameraToggle: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  cameraTogglePressed: {
+    backgroundColor: colors.surfaceMuted,
   },
   overlayText: {
     color: '#FFFFFF',

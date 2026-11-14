@@ -6,6 +6,11 @@
 - Thứ tự tab là Home, Train, AI Coach, Progress, FitMeal, rồi Profile.
 - `npm run lint` và `npm run typecheck` PASS; chưa thực hiện QA render native cho chỉnh sửa thị giác này.
 
+## Đổi camera cho Camera AI — 2026-11-14
+
+- Camera AI có nút đổi giữa camera sau và trước. Đổi camera chỉ thay camera preview/inference cục bộ; reset pha squat và debounce rep để frame trước khi đổi không được tính thành rep mới.
+- `npm run lint`, `npm run typecheck` và 42 regression tests PASS. Chưa kiểm tra native preview/inference của camera trước trên development build hoặc thiết bị thật.
+
 ## Gỡ camera AI — 2026-11-13
 
 - Theo yêu cầu người dùng, khôi phục các file liên quan camera về mốc `44bbe14` (trước commit `7198f3d` và bản sửa `8f63e7b`). Giữ commit GIF `b233c96`, AI Coach, auth/profile và cloud sync đã có trước camera. Không reset Git hoặc thay đổi agents.
