@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -36,12 +36,22 @@ export const FitMealScreen: React.FC<FitMealScreenProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [inputWeight, setInputWeight] = useState(String(activeStats.weightKg));
   const [inputHeight, setInputHeight] = useState(String(activeStats.heightCm));
+const [previousStats, setPreviousStats] = useState({
+  weightKg: activeStats.weightKg,
+  heightCm: activeStats.heightCm,
+});
 
-  useEffect(() => {
-    setInputWeight(String(activeStats.weightKg));
-    setInputHeight(String(activeStats.heightCm));
-  }, [activeStats.weightKg, activeStats.heightCm]);
-
+if (
+  previousStats.weightKg !== activeStats.weightKg ||
+  previousStats.heightCm !== activeStats.heightCm
+) {
+  setPreviousStats({
+    weightKg: activeStats.weightKg,
+    heightCm: activeStats.heightCm,
+  });
+  setInputWeight(String(activeStats.weightKg));
+  setInputHeight(String(activeStats.heightCm));
+}
   // 1. Tính toán đánh giá BMI tự động mỗi khi weightKg hoặc heightCm thay đổi
   const bmiAssessment = useMemo(
     () => evaluateBMI(activeStats.weightKg, activeStats.heightCm),
@@ -49,16 +59,19 @@ export const FitMealScreen: React.FC<FitMealScreenProps> = ({
   );
 
   // 2. Tự động chuyển mục tiêu đề xuất khi mức BMI thay đổi
-  const [selectedGoal, setSelectedGoal] = useState<DietGoal>(
-    bmiAssessment.recommendedGoal
-  );
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
-  const [activeMealModal, setActiveMealModal] = useState<MealItem | null>(null);
+const [selectedGoal, setSelectedGoal] = useState<DietGoal>(
+  bmiAssessment.recommendedGoal
+);
+const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
+const [activeMealModal, setActiveMealModal] = useState<MealItem | null>(null);
 
-  useEffect(() => {
-    setSelectedGoal(bmiAssessment.recommendedGoal);
-  }, [bmiAssessment.recommendedGoal]);
+const [previousRecommendedGoal, setPreviousRecommendedGoal] =
+  useState(bmiAssessment.recommendedGoal);
 
+if (previousRecommendedGoal !== bmiAssessment.recommendedGoal) {
+  setPreviousRecommendedGoal(bmiAssessment.recommendedGoal);
+  setSelectedGoal(bmiAssessment.recommendedGoal);
+}
   // 3. Tính lại tổng Calo định mức mỗi ngày
   const targetDailyCalories = useMemo(
     () =>

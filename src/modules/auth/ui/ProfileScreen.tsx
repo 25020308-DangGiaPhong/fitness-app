@@ -1,4 +1,4 @@
-import { File } from 'expo-file-system';
+
 import { updateUserBodyStats } from '@/features/home/FitMeal/userBodyStore';
 import { useEffect, useState } from 'react';
 import {
