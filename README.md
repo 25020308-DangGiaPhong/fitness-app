@@ -78,3 +78,7 @@ Trong phiên có các nút chỉnh mục tiêu và Finish early. Giảm hiệp k
 - Nếu danh sách có bài giữ theo giây, ghi tên bài và đơn vị `seconds`/`giây`; Coach không đổi reps thành giây. Giới hạn demo: 1–5 hiệp, 1–60 lần/giây mỗi hiệp.
 - Ở đầu màn Workout, chạm số **sets**, **per set**, **rest**; cuộn số kiểu alarm, **Done** áp dụng, **Cancel** giữ nguyên. Rest chọn 0–180 giây, bước 5 giây. Start dùng các giá trị đã chọn; Resume hiển thị mục tiêu phiên đang có.
 - Contract `POST /api/coach`: suggest dùng `exerciseIds: string[]` (1–5 ID thật, không trùng). Client/server phải chạy cùng bản. Coach giữ transcript và mục tiêu gợi ý trong RAM; workout-sessions lưu phiên đã Start với totalSets, targetAmount và restMs.
+
+## Bản ghép AI Coach + FitMeal (14/11/2026)
+
+Expo được khóa ở 58.0.25; package-lock.json đã đồng bộ với package.json. Giữ expo-dev-client từ nhánh FitMeal, nhưng các lệnh npm start / npm run ios / npm run android chỉ định --go để tiếp tục mở bằng Expo Go. Chạy npm ci sau khi pull để cài đúng bộ dependency. Camera AI/MediaPipe vẫn được gỡ theo quyết định trước đó; FitMeal không cần chúng.

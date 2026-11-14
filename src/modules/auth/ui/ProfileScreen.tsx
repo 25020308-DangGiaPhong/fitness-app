@@ -1,4 +1,5 @@
-import { File } from 'expo-file-system';
+
+import { updateUserBodyStats } from '@/features/home/FitMeal/userBodyStore';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -82,6 +83,14 @@ export function ProfileScreen() {
             : '',
         );
         setAvatarUri(loadedProfile.avatar_url);
+
+        // Đồng bộ dữ liệu ban đầu vừa tải từ Supabase sang FitMeal
+        if (loadedProfile.weight_kg != null || loadedProfile.height_cm != null) {
+          updateUserBodyStats({
+            weightKg: loadedProfile.weight_kg ?? 70,
+            heightCm: loadedProfile.height_cm ?? 172,
+          });
+        }
       }
 
       setLoading(false);
@@ -177,14 +186,15 @@ export function ProfileScreen() {
       setSaving(true);
 
       let uploadedAvatarUrl = profile?.avatar_url ?? null;
-      const previousAvatarUrl = profile?.avatar_url ?? null;
-      if (newAvatarUri) {
-        const imageFile = new File(newAvatarUri);
-        const arrayBuffer = await imageFile.arrayBuffer();
 
-        if (arrayBuffer.byteLength === 0) {
-            throw new Error('The selected image is empty.');
+      if (newAvatarUri) {
+        const response = await fetch(newAvatarUri);
+
+        if (!response.ok) {
+            throw new Error('Could not read the selected image.');
         }
+
+        const arrayBuffer = await response.arrayBuffer();
 
         const filePath = `${user.id}/avatar-${Date.now()}.jpg`;
 
@@ -225,36 +235,20 @@ export function ProfileScreen() {
 
       if (updateError) throw updateError;
 
-        // Delete the previous avatar after the new profile is saved.
-        if (
-        previousAvatarUrl &&
-        uploadedAvatarUrl &&
-        previousAvatarUrl !== uploadedAvatarUrl
-        ) {
-        try {
-            const oldFilePath = decodeURIComponent(
-            previousAvatarUrl.split('/avatars/')[1]?.split('?')[0] ?? '',
-            );
-
-            // Only delete files belonging to the current user.
-            if (oldFilePath.startsWith(`${user.id}/`)) {
-            const { error: deleteError } = await supabase.storage
-                .from('avatars')
-                .remove([oldFilePath]);
-
-            if (deleteError) {
-                console.warn('Could not delete old avatar:', deleteError.message);
-            }
-            }
-        } catch (error) {
-            console.warn('Old avatar cleanup failed:', error);
-        }
-        }
-
-        setProfile(updatedProfile);
+      setProfile(updatedProfile);
       setAvatarUri(uploadedAvatarUrl);
       setNewAvatarUri(null);
       setEditing(false);
+
+      // ==========================================
+      // ĐỒNG BỘ CÂN NẶNG & CHIỀU CAO SANG FITMEAL TỨC THÌ
+      // ==========================================
+      if (weightValue !== null && heightValue !== null) {
+        updateUserBodyStats({
+          weightKg: weightValue,
+          heightCm: heightValue,
+        });
+      }
 
       Alert.alert('Success', 'Your profile has been updated.');
     } catch (error) {

@@ -121,6 +121,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="fitmeal"
+        options={{
+          title: 'FitMeal',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="restaurant-outline" size={size ?? 24} color={typeof color === 'string' ? color : '#10B981'} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

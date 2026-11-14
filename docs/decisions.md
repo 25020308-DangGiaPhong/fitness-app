@@ -75,3 +75,7 @@ Người dùng duyệt sửa hỏi lưng trên/dưới; thêm check-in chủ đ�
 Theo yêu cầu người dùng: chọn cảm nhận chỉ hỏi vùng muốn tập; sau vùng hiển thị danh sách bài phù hợp. Chat chỉnh mục tiêu sets/amount cho cả danh sách hoặc bài được gọi tên. Mục tiêu trên thẻ và truyền sang Train dùng cùng giá trị; yêu cầu số cụ thể ưu tiên hơn mặc định theo cảm nhận.
 
 Chạm các ô set, lượng mỗi hiệp và rest ở đầu màn Workout để mở wheel picker có Cancel/Done; bỏ bốn nút tăng/giảm cuối màn. Giữ giới hạn hiện có 1–5 sets, 1–60 mỗi hiệp; rest 0–180 giây, bước 5 giây. Coach giữ gợi ý trong RAM; workout-sessions tiếp tục sở hữu phiên đã Start. Không thêm multi-exercise session, chat giữa hiệp, dependency hoặc đánh giá thể lực từ hồ sơ.
+
+## Resolve PR #4: AI Coach → FitMeal — 2026-11-14
+
+Người dùng yêu cầu xử lý conflict giữa feature/ai-coach và feature/fitmeal-integration. Ghép nhánh FitMeal vào nhánh nguồn AI Coach để cập nhật PR, giữ nguyên tính năng FitMeal/Profile của nhánh đích và code Coach hiện tại. Chọn Expo exact58.0.25 từ nhánh FitMeal; giữ expo-dev-client mới thêm, scripts chỉ định --go để giữ đường Expo Go. Không khôi phục expo-camera/expo-mediapipe-pose vì camera AI đã được yêu cầu gỡ và FitMeal không import hai package này. Tái tạo lockfile bằng npm từ manifest đã resolve, không ghép thủ công version/integrity. Không đổi data owner hoặc tự merge PR vào nhánh đích.
