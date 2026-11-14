@@ -20,6 +20,7 @@ import {
 } from './fitmealCalculator';
 import { GOAL_LABELS, WEEKLY_MEAL_PLANS } from './fitmealData';
 import { useUserBodyStats } from './userBodyStore';
+import { colors } from '@/ui';
 
 interface FitMealScreenProps {
   userStats?: UserBodyStats;
@@ -315,7 +316,7 @@ if (previousRecommendedGoal !== bmiAssessment.recommendedGoal) {
               value={inputHeight}
               onChangeText={setInputHeight}
               placeholder="Ví dụ: 172"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.textSecondary}
             />
 
             <Text style={styles.inputLabel}>Cân nặng (kg)</Text>
@@ -325,7 +326,7 @@ if (previousRecommendedGoal !== bmiAssessment.recommendedGoal) {
               value={inputWeight}
               onChangeText={setInputWeight}
               placeholder="Ví dụ: 65"
-              placeholderTextColor="#64748B"
+              placeholderTextColor={colors.textSecondary}
             />
 
             <View style={styles.editModalButtons}>
@@ -414,32 +415,32 @@ if (previousRecommendedGoal !== bmiAssessment.recommendedGoal) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.canvas,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 28 : 0,
   },
   container: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: '#F8FAFC' },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: colors.textPrimary },
   headerSubtitle: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     marginTop: 4,
     marginBottom: 16,
   },
   bmiCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
   bmiTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  bmiStatsText: { color: '#CBD5E1', fontSize: 14, marginBottom: 8 },
-  boldWhite: { color: '#FFFFFF', fontWeight: '700' },
+  bmiStatsText: { color: colors.textSecondary, fontSize: 14, marginBottom: 8 },
+  boldWhite: { color: colors.textPrimary, fontWeight: '700' },
   badgeAndEditRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -455,12 +456,12 @@ const styles = StyleSheet.create({
   },
   bmiBadgeText: { fontSize: 13, fontWeight: '700' },
   editStatsBtn: {
-    backgroundColor: '#334155',
+    backgroundColor: colors.surfaceMuted,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
   },
-  editStatsBtnText: { color: '#38BDF8', fontSize: 12, fontWeight: '700' },
+  editStatsBtnText: { color: colors.action, fontSize: 12, fontWeight: '700' },
   bmiScoreCircle: {
     width: 68,
     height: 68,
@@ -468,12 +469,12 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.canvas,
   },
-  bmiScoreLabel: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
+  bmiScoreLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600' },
   bmiScoreValue: { fontSize: 20, fontWeight: '800' },
   bmiAdviceText: {
-    color: '#E2E8F0',
+    color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 12,
@@ -481,7 +482,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   goalGrid: {
@@ -492,25 +493,25 @@ const styles = StyleSheet.create({
   },
   goalCard: {
     width: '48%',
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     padding: 12,
     borderRadius: 12,
     marginBottom: 10,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
-  goalCardActive: { borderColor: '#10B981', backgroundColor: '#064E3B' },
+  goalCardActive: { borderColor: colors.action, backgroundColor: colors.accentSurface },
   recommendTag: {
     fontSize: 10,
-    color: '#34D399',
+    color: colors.action,
     fontWeight: '700',
     marginBottom: 4,
   },
-  goalTitle: { fontSize: 15, fontWeight: '700', color: '#F1F5F9' },
-  goalTextActive: { color: '#FFFFFF' },
-  goalSubtitle: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
+  goalTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  goalTextActive: { color: colors.textPrimary },
+  goalSubtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   macroSummaryCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 14,
     flexDirection: 'row',
@@ -518,42 +519,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  macroLabel: { color: '#94A3B8', fontSize: 12 },
+  macroLabel: { color: colors.textSecondary, fontSize: 12 },
   macroCaloriesValue: {
-    color: '#38BDF8',
+    color: colors.action,
     fontSize: 22,
     fontWeight: '800',
     marginTop: 2,
   },
   macroRow: { flexDirection: 'row', gap: 10 },
   macroPill: {
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.canvas,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     alignItems: 'center',
   },
-  macroPillVal: { color: '#F8FAFC', fontWeight: '700', fontSize: 13 },
-  macroPillLabel: { color: '#64748B', fontSize: 11 },
+  macroPillVal: { color: colors.textPrimary, fontWeight: '700', fontSize: 13 },
+  macroPillLabel: { color: colors.textSecondary, fontSize: 11 },
   daySelector: { marginBottom: 16 },
   dayButton: {
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     marginRight: 10,
   },
-  dayButtonActive: { backgroundColor: '#3B82F6' },
-  dayButtonText: { color: '#94A3B8', fontWeight: '600' },
-  dayButtonTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  dayButtonActive: { backgroundColor: colors.action },
+  dayButtonText: { color: colors.textSecondary, fontWeight: '600' },
+  dayButtonTextActive: { color: colors.onAction, fontWeight: '700' },
   mealCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     overflow: 'hidden',
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
   mealImage: { width: 115, height: 125 },
   mealInfo: { flex: 1, padding: 12, justifyContent: 'space-between' },
@@ -562,17 +563,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  mealTypeTag: { color: '#38BDF8', fontSize: 12, fontWeight: '700' },
-  mealCalorieTag: { color: '#FBBF24', fontSize: 12, fontWeight: '700' },
+  mealTypeTag: { color: colors.action, fontSize: 12, fontWeight: '700' },
+  mealCalorieTag: { color: colors.action, fontSize: 12, fontWeight: '700' },
   mealTitle: {
-    color: '#F8FAFC',
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '700',
     marginVertical: 4,
   },
-  mealMacrosText: { color: '#94A3B8', fontSize: 12 },
+  mealMacrosText: { color: colors.textSecondary, fontSize: 12 },
   tapToViewText: {
-    color: '#34D399',
+    color: colors.action,
     fontSize: 11,
     fontWeight: '600',
     marginTop: 4,
@@ -584,31 +585,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   editModalBox: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
-  editModalTitle: { color: '#F8FAFC', fontSize: 18, fontWeight: '800' },
+  editModalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '800' },
   editModalDesc: {
-    color: '#94A3B8',
+    color: colors.textSecondary,
     fontSize: 13,
     marginTop: 4,
     marginBottom: 16,
   },
   inputLabel: {
-    color: '#CBD5E1',
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 6,
   },
   textInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.canvas,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     borderRadius: 10,
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
@@ -624,23 +625,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#334155',
+    backgroundColor: colors.surfaceMuted,
   },
-  cancelBtnText: { color: '#CBD5E1', fontWeight: '600' },
+  cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
   saveBtn: {
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.action,
   },
-  saveBtnText: { color: '#FFFFFF', fontWeight: '700' },
+  saveBtnText: { color: colors.onAction, fontWeight: '700' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '88%',
@@ -648,22 +649,22 @@ const styles = StyleSheet.create({
   },
   modalImage: { width: '100%', height: 210 },
   modalBody: { padding: 20 },
-  modalMealType: { color: '#38BDF8', fontSize: 13, fontWeight: '700' },
+  modalMealType: { color: colors.action, fontSize: 13, fontWeight: '700' },
   modalTitle: {
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: '800',
     marginTop: 4,
   },
   modalCalories: {
-    color: '#FBBF24',
+    color: colors.action,
     fontSize: 13,
     fontWeight: '600',
     marginTop: 6,
     marginBottom: 16,
   },
   modalSectionHeading: {
-    color: '#F8FAFC',
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '700',
     marginTop: 12,
@@ -674,32 +675,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: colors.border,
   },
-  ingredientName: { color: '#E2E8F0', fontSize: 14 },
-  ingredientGrams: { color: '#34D399', fontSize: 14, fontWeight: '700' },
+  ingredientName: { color: colors.textPrimary, fontSize: 14 },
+  ingredientGrams: { color: colors.action, fontSize: 14, fontWeight: '700' },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   stepBadge: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.action,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
     marginTop: 2,
   },
-  stepBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  stepText: { flex: 1, color: '#CBD5E1', fontSize: 14, lineHeight: 20 },
+  stepBadgeText: { color: colors.onAction, fontSize: 12, fontWeight: '700' },
+  stepText: { flex: 1, color: colors.textPrimary, fontSize: 14, lineHeight: 20 },
   closeButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.action,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
     marginBottom: 10,
   },
-  closeButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  closeButtonText: { color: colors.onAction, fontSize: 16, fontWeight: '700' },
 });
 
 export default FitMealScreen;

@@ -1,5 +1,11 @@
 # Tiến độ và hạn chế
 
+## Đồng bộ palette FitMeal — 2026-11-14
+
+- FitMeal nay dùng token neutral/coral chung cho nền, surface, viền, chữ, trạng thái chọn và hành động; icon tab cũng dùng màu do tab navigator cung cấp thay fallback xanh lá. Màu BMI theo từng mức vẫn giữ vì là tín hiệu trạng thái, không phải màu chrome của tab.
+- Thứ tự tab là Home, Train, AI Coach, Progress, FitMeal, rồi Profile.
+- `npm run lint` và `npm run typecheck` PASS; chưa thực hiện QA render native cho chỉnh sửa thị giác này.
+
 ## Gỡ camera AI — 2026-11-13
 
 - Theo yêu cầu người dùng, khôi phục các file liên quan camera về mốc `44bbe14` (trước commit `7198f3d` và bản sửa `8f63e7b`). Giữ commit GIF `b233c96`, AI Coach, auth/profile và cloud sync đã có trước camera. Không reset Git hoặc thay đổi agents.
