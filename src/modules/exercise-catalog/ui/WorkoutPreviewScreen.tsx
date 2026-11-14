@@ -1,29 +1,31 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useSessions } from '@/modules/workout-sessions';
 import { AppText, Button, colors, Screen } from '@/ui';
 
 import { getExercise } from '../catalog';
+import { TargetPicker } from './TargetPicker';
 
 type Props = {
+  suggestedSets?: string;
+  suggestedAmount?: string;
   exerciseId: string;
   onStart: (id: string) => void;
-  onStartWithCamera: (id: string) => void;
 };
 
-export function WorkoutPreviewScreen({
-  exerciseId,
-  onStart,
-  onStartWithCamera,
-}: Props) {
+export function WorkoutPreviewScreen({ exerciseId, onStart, suggestedSets, suggestedAmount }: Props) {
   const exercise = getExercise(exerciseId);
-  const { start, command, snapshot, updateAiData } = useSessions();
+  const { start, command, snapshot } = useSessions();
 
+  const [sets, setSets] = useState(() => Number.isInteger(Number(suggestedSets)) && Number(suggestedSets) >= 1 && Number(suggestedSets) <= 5 ? Number(suggestedSets) : exercise?.sets ?? 2);
+  const [amount, setAmount] = useState(() => Number.isInteger(Number(suggestedAmount)) && Number(suggestedAmount) >= 1 && Number(suggestedAmount) <= 60 ? Number(suggestedAmount) : Number.parseInt(exercise?.reps ?? '8', 10));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rest, setRest] = useState(exercise?.rest ?? 30);
+  const [editing, setEditing] = useState<'sets' | 'amount' | 'rest' | null>(null);
 
   if (!exercise) {
     return (
@@ -44,38 +46,29 @@ export function WorkoutPreviewScreen({
 
   const hasDifferentActiveSession =
     !!activeSession && activeSession.exerciseId !== exercise.id;
+  const resuming = !!activeSession && !hasDifferentActiveSession;
+  const displayedSets = resuming ? activeSession.totalSets : sets;
+  const displayedAmount = resuming ? activeSession.targetAmount ?? Number.parseInt(exercise.reps, 10) : amount;
+  const displayedRest = resuming ? activeSession.restMs / 1000 : rest;
 
-  // MVP: Camera AI hiện hỗ trợ đếm squat.
-  const cameraAiSupported = exercise.id === 'bodyweight-squat';
-
-  const begin = async (useCamera: boolean) => {
+  // Bắt đầu hoặc tiếp tục buổi tập hiện tại.
+  const begin = async () => {
     if (busy) return;
 
     setBusy(true);
     setError(null);
 
     try {
-      const sessionId = await start(exercise.id);
-
-      if (useCamera) {
-        await updateAiData(sessionId, {
-          repsCompleted: 0,
-          formFeedback: [],
-        });
-        onStartWithCamera(sessionId);
-      } else {
-        onStart(sessionId);
-      }
+      onStart(await start(exercise.id, { sets, amount, restSeconds: rest }));
     } catch {
-      setError(
-        'Could not save your session. Check available device storage and try again.',
-      );
+      setError('Could not save your session. Check available device storage and try again.');
     } finally {
       setBusy(false);
     }
   };
 
-  const replaceSession = async (useCamera: boolean) => {
+  // Kết thúc buổi tập cũ rồi bắt đầu bài tập mới.
+  const replaceSession = async () => {
     if (busy || !activeSession) return;
 
     setBusy(true);
@@ -84,29 +77,13 @@ export function WorkoutPreviewScreen({
     try {
       await command(activeSession.id, 'cancel');
 
-      const newSessionId = await start(exercise.id);
+      const newSessionId = await start(exercise.id, { sets, amount, restSeconds: rest });
 
-      if (useCamera) {
-        await updateAiData(newSessionId, {
-          repsCompleted: 0,
-          formFeedback: [],
-        });
-        onStartWithCamera(newSessionId);
-      } else {
-        onStart(newSessionId);
-      }
+      onStart(newSessionId);
     } catch {
       setError('Could not start this session. Please try again.');
     } finally {
       setBusy(false);
-    }
-  };
-
-  const startWorkout = (useCamera: boolean) => {
-    if (hasDifferentActiveSession) {
-      void replaceSession(useCamera);
-    } else {
-      void begin(useCamera);
     }
   };
 
@@ -132,19 +109,42 @@ export function WorkoutPreviewScreen({
       <AppText tone="secondary">{exercise.focus}</AppText>
 
       <View style={styles.stats}>
-        {[
-          [`${exercise.sets}`, 'sets'],
-          [exercise.reps, 'per set'],
-          [`${exercise.rest}s`, 'rest'],
-        ].map(([value, label]) => (
-          <View key={label} style={styles.stat}>
-            <AppText variant="heading">{value}</AppText>
+        {([
+          { field: 'sets', value: `${displayedSets}`, label: 'sets' },
+          { field: 'amount', value: exercise.reps.replace(/^\d+/, String(displayedAmount)), label: 'per set' },
+          { field: 'rest', value: `${displayedRest}s`, label: 'rest' },
+        ] as const).map(({ field, value, label }) => (
+          <Pressable key={field} style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
+            disabled={busy || resuming}
+            accessibilityRole="button"
+            accessibilityLabel={`Change ${label}: ${value}`}
+            accessibilityHint="Opens a scrollable number picker"
+            accessibilityState={{ disabled: busy || resuming }}
+            onPress={() => setEditing(field)}>
+            <AppText variant="heading" style={!resuming && styles.editable}>{value}</AppText>
             <AppText variant="caption" tone="secondary">
               {label}
             </AppText>
-          </View>
+          </Pressable>
         ))}
       </View>
+      {!resuming && <AppText variant="caption" tone="secondary" style={styles.pickerHint}>Tap a number to adjust your target.</AppText>}
+      {editing && <TargetPicker
+        key={editing}
+        title={editing === 'sets' ? 'Sets' : editing === 'rest' ? 'Rest between sets' : 'Amount per set'}
+        value={editing === 'sets' ? sets : editing === 'rest' ? rest : amount}
+        min={editing === 'rest' ? 0 : 1}
+        max={editing === 'sets' ? 5 : editing === 'rest' ? 180 : 60}
+        step={editing === 'rest' ? 5 : 1}
+        unit={editing === 'sets' ? 'sets' : editing === 'rest' ? 'seconds' : exercise.reps.replace(/^\d+\s*/, '') + ' per set'}
+        onCancel={() => setEditing(null)}
+        onConfirm={(value) => {
+          if (editing === 'sets') setSets(value);
+          else if (editing === 'rest') setRest(value);
+          else setAmount(value);
+          setEditing(null);
+        }}
+      />}
 
       <AppText variant="heading">Make every rep count</AppText>
 
@@ -192,7 +192,7 @@ export function WorkoutPreviewScreen({
       <Button
         label={
           busy
-            ? 'Saving...'
+            ? 'Saving…'
             : hasDifferentActiveSession
               ? `End current session and start ${exercise.name}`
               : activeSession
@@ -200,24 +200,17 @@ export function WorkoutPreviewScreen({
                 : 'Start session'
         }
         disabled={busy}
-        onPress={() => startWorkout(false)}
+        onPress={() => {
+          void (
+            hasDifferentActiveSession
+              ? replaceSession()
+              : begin()
+          );
+        }}
       />
 
-      <View style={styles.cameraButton}>
-        <Button
-          label={
-            cameraAiSupported
-              ? 'Start session with Camera AI'
-              : 'Camera AI not available for this exercise yet'
-          }
-          disabled={busy || !cameraAiSupported}
-          onPress={() => startWorkout(true)}
-        />
-      </View>
-
       <AppText variant="caption" tone="secondary" style={styles.foot}>
-        Timer mode works without a camera. Camera AI currently supports
-        Bodyweight Squat only.
+        No camera required · Self-reported activity · Saved on device
       </AppText>
     </Screen>
   );
@@ -250,7 +243,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     gap: 4,
+    minHeight: 80,
   },
+  editable: { color: colors.action },
+  pressed: { opacity: 0.72 },
+  pickerHint: { marginTop: -16, marginBottom: 24 },
   step: {
     flexDirection: 'row',
     gap: 12,
@@ -284,9 +281,6 @@ const styles = StyleSheet.create({
   },
   error: {
     marginBottom: 16,
-  },
-  cameraButton: {
-    marginTop: 12,
   },
   foot: {
     marginTop: 16,

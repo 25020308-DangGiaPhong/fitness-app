@@ -22,7 +22,7 @@ function readRequest(value: unknown): MobilityRequest | undefined {
     if (!history) return;
     return { text: value.text.trim(), history };
   }
-  if ('posture' in value && (value.posture === 'seated' || value.posture === 'standing' || value.posture === 'floor') &&
+  if ('posture' in value && (value.posture === 'seated' || value.posture === 'standing' || value.posture === 'floor' || value.posture === 'any') &&
       !('text' in value)) {
     const area = 'area' in value ? value.area : 'shoulders';
     if (isMobilityArea(area)) return { posture: value.posture, area };
@@ -34,11 +34,11 @@ export async function postCoach(request: Request): Promise<Response> {
   if (!input) return Response.json({ error: 'Invalid request' }, { status: 400 });
 
   if ('text' in input) {
-    const reply = textBoundary(input.text);
+    const reply = textBoundary(input.text, input.history);
     if (reply) return Response.json(reply);
   } else {
-    const candidate = demoCandidates(input.area, input.posture)[0];
-    return Response.json(candidate ? { step: 'suggest', exerciseId: candidate.id } : { step: 'no_match' });
+    const candidates = demoCandidates(input.area, input.posture).slice(0, 5);
+    return Response.json(candidates.length ? { step: 'suggest', exerciseIds: candidates.map(({ id }) => id) } : { step: 'no_match' });
   }
 
   const key = process.env.GROQ_API_KEY;
@@ -65,15 +65,17 @@ export async function postCoach(request: Request): Promise<Response> {
               'Combine the latest message with the preceding conversation. Remember the requested area, posture, time and equipment. A short answer fills in the missing detail; it is not a new isolated request. The latest explicit preference replaces an earlier preference.',
               'Ask one specific question only for missing information. Acknowledge preferences already given and never ask for them again. For "I want gentle movement" ask which body area. After "Standing stretch" remember standing and ask only the area. After "Back" ask upper or lower back while remembering standing.',
               'For "change to seated" keep the earlier area. If no catalog exercise matches, explain which preference cannot be met and ask whether the person wants to change it. Never silently drop a constraint.',
-              'Use message for a brief question or a concrete reason the selected exercise matches. Do not use a generic repeated clarification template.',
+              'Respond with warmth and respect for autonomy. Acknowledge stress, mental fatigue or a user-disclosed menstrual cycle without diagnosing, guessing a cycle phase, or claiming a medical assessment. Offer rest without guilt when they do not want to train. When tired prefer a short gentle catalog movement; when energized offer a modest challenge, never maximal exertion. Suggested volume is bounded by the app and the person reviews it before starting.',
+              'Use message for a brief question or a concrete reason the selected exercises match. Never state numeric sets, reps, or durations in message; the app renders the actual adjustable targets on exercise cards. Do not use a generic repeated clarification template.',
               'For pain, injury, neurological symptoms, or a request to treat symptoms return stop.',
               'If recent messages report pain or injury, do not suggest an exercise for that concern based on a posture-only follow-up.',
               'Ordinary tightness, fatigue, or "mỏi" alone does not indicate pain or injury. Return clarify if the movement goal or area is unclear.',
               'Explicit movement requests such as "Tôi muốn vận động vai" are wellness requests. Do not ask about pain unless the person describes symptoms.',
               'For a clear general mobility request, match the requested area, time, posture and equipment. If the request gives no posture, any catalog posture is eligible. Return no_match if the request is clear but nothing fits.',
-              'Treat a time budget such as 10 minutes as an upper limit, not an exact required exercise duration. A 3-minute catalog exercise fits within 10 minutes. Do not invent longer sets or a longer routine.',
+              'When posture or equipment is unspecified, include alternatives across postures and equipment. Do not silently assume standing or no equipment. For example, a general hip request must include both Standing Hip Circles and Seated Hip March; a request for seated hips should include only Seated Hip March. These are options to choose from, not a prescribed routine.',
+              'Treat a time budget such as 10 minutes as an upper limit, not an exact required exercise duration. Suggestions are alternatives, not a combined routine. Do not invent longer sets or a longer routine.',
               'Interpret "giãn lưng dưới" as lower-back mobility and "stretch my knee" or "the area is knee and I want to sit" as knee mobility when no pain or injury is mentioned.',
-              'Use null for exerciseId unless suggesting.',
+              'Return 2–5 different exerciseIds when at least two catalog movements satisfy all preferences; return one only if it is the sole match. Never pad the list with an unrelated area or incompatible posture or equipment. Use an empty exerciseIds array unless suggesting. A check-in alone should ask which body area to train before suggesting exercises.',
               `Catalog: ${JSON.stringify(movements)}`,
             ].join(' '),
           },
@@ -90,9 +92,9 @@ export async function postCoach(request: Request): Promise<Response> {
               properties: {
                 step: { type: 'string', enum: ['stop', 'clarify', 'no_match', 'suggest'] },
                 message: { type: 'string', minLength: 1, maxLength: 400 },
-                exerciseId: { type: ['string', 'null'], enum: [null, ...movements.map(({ id }) => id)] },
+                exerciseIds: { type: 'array', items: { type: 'string', enum: movements.map(({ id }) => id) }, maxItems: 5 },
               },
-              required: ['step', 'exerciseId', 'message'],
+              required: ['step', 'exerciseIds', 'message'],
               additionalProperties: false,
             },
           },
@@ -107,7 +109,7 @@ export async function postCoach(request: Request): Promise<Response> {
     const content = result?.choices?.[0]?.message?.content;
     const reply = typeof content === 'string' ? readCoachReply(JSON.parse(content)) : undefined;
     if (!reply || reply.step === 'posture' ||
-        (reply.step === 'suggest' && !movements.some(({ id }) => id === reply.exerciseId))) {
+        (reply.step === 'suggest' && reply.exerciseIds.some((exerciseId) => !movements.some(({ id }) => id === exerciseId)))) {
       throw new Error('Invalid provider reply');
     }
     return Response.json(reply);

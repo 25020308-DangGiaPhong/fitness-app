@@ -1,5 +1,7 @@
 # Fitness App — local workout demo
 
+Camera AI đã được gỡ ngày 13/11/2026. `npm run ios` và `npm run android` mở bằng Expo Go như trước khi tích hợp camera; không build native. Không cần CocoaPods hoặc MediaPipe để chạy phiên bản này. GIF bài tập, AI Coach và các tính năng khác vẫn được giữ.
+
 React Native + Expo SDK58 + TypeScript. UI English, neutral/coral. Luồng tập và Progress lưu local. Demo không cần camera, sự kiện hoặc leaderboard.
 
 Tab **AI Coach** hướng dẫn mobility và stretching. Demo có thể dùng Groq qua Expo dev server hoặc dùng lựa chọn nhanh trên thiết bị.
@@ -60,3 +62,23 @@ Khi chat tự do, Coach gửi tối đa 8 tin nhắn gần nhất trong cuộc c
 Khi chat tự do gặp lỗi, thông báo cho biết quá thời gian chờ, chạm quota hoặc không kết nối được. Nút **Try again** gửi lại câu vừa hỏi với ngữ cảnh cũ. Các lựa chọn nhanh về vùng và tư thế đã chọn vẫn có thể lọc bài trên máy.
 
 Test Coach dùng callback và fetch giả lập để kiểm tra gửi trùng, đổi chat khi đang đợi, nhánh dừng, offline và kiểm tra ID. Cần chạy lại walkthrough bằng Expo Go với key thật để xác nhận Groq và hành vi trên điện thoại.
+
+## Check-in và lượng tập
+
+Coach mở chat bằng câu hỏi cảm nhận trong ngày: tired/stressed, usual, energized hoặc rest. “Tôi bị mỏi lưng” hỏi tiếp upper/lower back bằng lựa chọn tại máy. Đề xuất hiển thị sets và số lần/thời gian mỗi hiệp; mở Train để xem và chỉnh trước khi Start. Đơn vị theo catalog (reps, mỗi bên, vòng hoặc giây), không đổi bài giữ thành bài đếm reps.
+
+Demo dùng quy tắc lượng tập có giới hạn: nhẹ = 1 hiệp và khoảng nửa lượng mỗi hiệp; thường = catalog; năng động = thêm 1 hiệp và khoảng 20% mỗi hiệp, tối đa 5 hiệp/60 đơn vị. Yêu cầu số cụ thể trong chat ưu tiên hơn mặc định này. Đây là mục tiêu do người dùng tự chọn, không phải phép đo khả năng hoặc giáo án chuyên môn. Lời đáp tự do vẫn có thể dùng Groq, còn các check-in và lựa chọn nhanh hoạt động local. Không suy đoán chu kỳ hoặc chẩn đoán từ tâm trạng.
+
+Trong phiên có các nút chỉnh mục tiêu và Finish early. Giảm hiệp không xóa hiệp đã hoàn thành; kết thúc sớm giữ số hiệp thực đã đánh dấu và nhãn endedEarly. Chưa hoàn thành hiệp nào thì kết thúc sẽ hủy phiên. Chat trong lúc tập/AI tự sửa phiên đang chạy chưa triển khai; không tự bật mic hoặc gửi dữ liệu phiên cho AI. Check-in chỉ ở chat RAM; session lưu mục tiêu, không lưu tâm trạng hoặc thông tin chu kỳ.
+
+## AI Coach: chỉnh mục tiêu qua chat và cuộn số
+
+- Chọn **tired / usual / energized** → Coach hỏi vùng muốn tập → chọn **Hips** để xem Standing Hip Circles và Seated Hip March. Danh sách là các lựa chọn thay thế; từng bài vẫn mở phiên riêng. Khi có yêu cầu tư thế/dụng cụ cụ thể, số lựa chọn phụ thuộc catalog.
+- Gửi `Tôi muốn 2 set`, rồi `12 reps` để cập nhật mục tiêu trên cả danh sách. Gửi `Seated Hip March 3 sets` để đổi riêng bài đó; `Giảm 1 set` giảm một hiệp trên các bài hiện tại. Thẻ mới và màn Train dùng cùng mục tiêu.
+- Nếu danh sách có bài giữ theo giây, ghi tên bài và đơn vị `seconds`/`giây`; Coach không đổi reps thành giây. Giới hạn demo: 1–5 hiệp, 1–60 lần/giây mỗi hiệp.
+- Ở đầu màn Workout, chạm số **sets**, **per set**, **rest**; cuộn số kiểu alarm, **Done** áp dụng, **Cancel** giữ nguyên. Rest chọn 0–180 giây, bước 5 giây. Start dùng các giá trị đã chọn; Resume hiển thị mục tiêu phiên đang có.
+- Contract `POST /api/coach`: suggest dùng `exerciseIds: string[]` (1–5 ID thật, không trùng). Client/server phải chạy cùng bản. Coach giữ transcript và mục tiêu gợi ý trong RAM; workout-sessions lưu phiên đã Start với totalSets, targetAmount và restMs.
+
+## Bản ghép AI Coach + FitMeal (14/11/2026)
+
+Expo được khóa ở 58.0.25; package-lock.json đã đồng bộ với package.json. Giữ expo-dev-client từ nhánh FitMeal, nhưng các lệnh npm start / npm run ios / npm run android chỉ định --go để tiếp tục mở bằng Expo Go. Chạy npm ci sau khi pull để cài đúng bộ dependency. Camera AI/MediaPipe vẫn được gỡ theo quyết định trước đó; FitMeal không cần chúng.

@@ -1,5 +1,14 @@
 # Tiến độ và hạn chế
 
+## Gỡ camera AI — 2026-11-13
+
+- Theo yêu cầu người dùng, khôi phục các file liên quan camera về mốc `44bbe14` (trước commit `7198f3d` và bản sửa `8f63e7b`). Giữ commit GIF `b233c96`, AI Coach, auth/profile và cloud sync đã có trước camera. Không reset Git hoặc thay đổi agents.
+- Gỡ route/screen camera, nút Camera AI, `updateAiData`, metadata camera khỏi hợp đồng session/cloud và rule hoàn tất riêng cho camera. Workout-sessions tiếp tục sở hữu phiên tập/persistence; phiên thủ công chỉ hoàn tất khi đủ hiệp như trước.
+- Khôi phục package.json/lockfile trước camera, gồm Expo58.0.23 và scripts mở Expo Go. `npm ci --offline` thành công. Gỡ dependency expo-camera/expo-mediapipe-pose và bản vá Swift thử nghiệm trong node_modules bằng cài lại bộ cũ.
+- Xóa thư mục `ios/` được sinh khi thử camera, cache build riêng FitnessApp, cache MediaPipe của CocoaPods và bốn mục npm cache camera. Gỡ bản native `com.sontobe.fitnessapp` trên Simulator `new`; vùng dữ liệu này chỉ có hai phiên camera. Không xóa Expo Go, Simulator runtime, công cụ dùng chung hoặc dữ liệu Expo Go.
+- Typecheck, 22 tests, diff check và export bundle iOS/Android PASS trên Node26.7.0. Lint còn lỗi dấu nháy JSX có sẵn ở SessionScreen.tsx:155, thuộc thay đổi GIF giữ lại; chưa sửa ngoài phạm vi rollback.
+- Dung lượng trống tăng từ khoảng3GB lên khoảng9GB sau dọn build/cache (số đo có thể thay đổi khi máy hoạt động). Chưa kiểm tra lại runtime Expo Go trên điện thoại thật; export không phải device test.
+
 ## Sửa lỗi chạy sau pull — 2026-11-11
 
 - Máy thiếu expo-image và expo-image-picker mới được thêm trong package-lock. Chạy npm ci để cài đúng dependency đã khóa. Sửa script ios bị khai báo hai lần và dấu nháy trong JSX của màn kết quả phiên tập làm lint fail.
@@ -109,3 +118,34 @@ Simulator iPhone17 Pro/iOS26.2 chỉ có Expo Go57.0.9, đã mở và quan sát 
 - Lint/typecheck, 20 tests và diff check pass. Groq thật hỏi vùng sau “vận động nhẹ”, nhớ đứng sau “Standing stretch”, hỏi lưng trên/dưới sau “Back”. Lượt cuối của lần chạy đầu trả unavailable; khi thử riêng với ngữ cảnh đầy đủ, “Upper back” trả Wall Slides và lý do chọn bài. Chưa kiểm tra lại giao diện native. Khi câu hiện tại chỉ rõ một vùng, server chỉ gửi các bài thuộc vùng đó để giảm lượng token.
 - Sửa lỗi dịch vụ bị gom thành một thông báo unavailable: phân biệt quota, thiếu cấu hình, timeout và lỗi provider. Tăng thời gian chờ Groq từ 7 lên 18 giây, client 22 giây. Nút Try again gửi lại nguyên câu và ngữ cảnh, không thêm user turn hoặc chuyển sang vùng vai. Câu trả lời thời lượng ngắn dùng vùng từ hội thoại để giảm catalog gửi đi. Groq thật với “10 minutes” và ngữ cảnh lưng dưới trả Cat–Cow 3 phút, phù hợp ngân sách thời gian. Lint/typecheck và 22 tests pass; chưa kiểm tra lại UI Simulator.
 
+
+## Empathy Coach và lượng tập — 2026-11-13
+
+- Sửa textBoundary nhận mỏi lưng chung, thêm upper/lower back và giữ nhánh đau ưu tiên. Client/server dùng cùng boundary và không để check-in mệt bypass ngữ cảnh đau trước đó.
+- Welcome check-in mới, lựa chọn tired/stressed/usual/energized/rest; nghỉ được tôn trọng. Tired với vùng tập trước đó giữ vùng đó khi có bài trong catalog. Prompt Groq nhấn mạnh đồng cảm, tự chủ và không suy đoán chu kỳ. Lượng tập là quy tắc demo giới hạn ở client, không tuyên bố là model đánh giá thể lực.
+- Coach truyền mục tiêu sets/amount qua route sang Train, người dùng có thể chỉnh trước Start. Workout-sessions sở hữu targetAmount/totalSets và adjustVolume/finish-early qua writer tuần tự. URL/input/storage được kiểm tra số nguyên/giới hạn; optional fields tương thích snapshot schemaVersion1 cũ. Catalog giữ đơn vị và default. Cloud metadata mang target_amount/ended_early; chưa kiểm chứng Supabase thật.
+- Trong phiên cho chỉnh tay và Finish early có xác nhận; không giảm totalSets dưới setsDone hoặc sửa phiên terminal. Kết thúc có hiệp thực lưu endedEarly, chưa có hiệp thì cancelled. Đây là mục tiêu tự khai; không ghi số rep hoàn thành giả. Chat giữa hiệp, voice và AI mutate active session hoãn.
+- Không thêm dependency, bài tập hay camera. Chỉ lưu mục tiêu phiên, check-in vẫn trong RAM. Thử mở Simulator qua CUA bị timeout nên chưa xác minh render/touch/device thật. Tests dùng callback/hook/fetch giả lập; không phải E2E hoặc đánh giá chuyên môn. Xem kết quả kiểm tra cuối lượt bên dưới.
+
+Kiểm chứng cuối lượt: lint/typecheck/diff check PASS; 28 tests PASS; export bundle iOS và Android PASS trên Node26.7.0. Không thêm native build hoặc dependency. Chưa chạy Groq thật với prompt mới và chưa QA giao diện native vì CUA timeout.
+
+## AI Coach: chỉnh qua chat, danh sách bài và wheel picker — 2026-11-14
+
+- [x] Check-in tired/usual/energized hỏi vùng trước; chọn Hips trả hai lựa chọn từ catalog. Nhánh mỏi/đau vẫn giữ xác nhận và ưu tiên dừng khi có đau trong hội thoại.
+- [x] Contract suggest đổi từ exerciseId sang exerciseIds (1–5 ID hợp lệ, không trùng). Guided/offline trả danh sách cùng vùng/tư thế; Groq được hướng dẫn đưa nhiều lựa chọn, giữ ràng buộc cụ thể. Thẻ hiển thị cả tư thế/dụng cụ. Danh sách là lựa chọn thay thế, chưa có phiên nhiều bài.
+- [x] Chat cập nhật mục tiêu thật trong RAM: số tuyệt đối, tăng/giảm có số, tiếng Anh/Việt, chỉnh cả danh sách hoặc bài được gọi tên. Mục tiêu mới trên thẻ và route Train dùng chung giá trị. Không cho reps đổi đơn vị bài giữ theo giây; số ngoài giới hạn không sửa mục tiêu. Yêu cầu số cụ thể ưu tiên hơn baseline theo check-in; baseline energized tăng cả sets và amount.
+- [x] Bỏ bốn nút tăng/giảm trong Workout preview. Chạm set/amount/rest ở đầu màn mở bộ cuộn có highlight giữa, Cancel/Done, adjustable accessibility actions và reduced motion. Rest tùy chỉnh được truyền qua public start API, kiểm tra số nguyên 0–180 và lưu vào restMs; không đổi schema storage. Resume hiển thị mục tiêu của phiên hiện hành.
+- [x] Owner không đổi: catalog giữ nội dung/đơn vị/default; Coach giữ transcript và gợi ý RAM; workout-sessions giữ phiên/persistence. Không thêm dependency, camera hoặc sửa cấu hình agents. Các thay đổi có sẵn trước lượt này được giữ nguyên.
+
+Kiểm chứng trên Node26.7.0, Expo58.0.23/RN0.88.1/React19.3.0: lint, typecheck, 34 tests và diff check PASS. Export iOS/Android PASS, artifact tạm tại `/private/tmp/fitness-coach-20261114`. Tests Coach dùng callback/hook/fetch giả lập, gồm sửa set/rep thật, tên bài, thay vùng, validation, safety history và list contract; chưa phải native E2E.
+
+QA native bằng CUA trên Expo Go, Simulator iPhone17 Pro (tên `new`, iOS26.2, UDID B24E11A8-C442-438A-85A9-25F46B4ECC61): chọn tired → hỏi vùng → Hips hiển thị hai bài; gửi số 2 sets/12 reps cập nhật cả hai thẻ; mở Seated Hip March nhận 2 sets/12 each side; wheel set tăng 2→3 qua adjustable action và Done áp dụng; kéo amount 12→13 và Done áp dụng; rest mở đúng bước5 và Cancel giữ15s. Một lần nhập tiếng Việt bằng bàn phím tự động bị rơi dấu ở Simulator; test callback dùng nguyên văn tiếng Việt. Không Start phiên hoặc ghi kết quả thử vào lịch sử người dùng. Ảnh màn Workout sau Cancel lưu tạm `/private/tmp/fitness-coach-picker-20261114.png`.
+
+Groq thật qua HTTP local với câu mẫu không chứa dữ liệu cá nhân: request hip mobility ban đầu vẫn trả một bài; sau chỉnh prompt không tự giả định standing/no-equipment, kiểm tra lại trả `standing-hip-circle` và `seated-hip-march`. Đây là smoke với một câu mẫu, chưa phải eval độ ổn định của model. Chưa thử Android runtime, iPhone thật, font lớn/landscape, VoiceOver/TalkBack đầy đủ, hoặc kiểm chứng cloud/Supabase. Warning MODULE_TYPELESS_PACKAGE_JSON có sẵn trong tests không làm fail.
+
+## Resolve conflict PR #4 — 2026-11-14
+
+- Merge origin/feature/fitmeal-integration tại 4293869 vào feature/ai-coach tại 29eb0a2; conflict chỉ ở package.json và package-lock.json. Giữ nguyên code FitMeal/Profile của nhánh đích, code Coach/catalog/session của nhánh nguồn. Không sửa cấu hình agents hoặc đổi data owner.
+- Expo exact58.0.25, giữ expo-dev-client58.0.20 từ FitMeal; giữ gỡ expo-camera/MediaPipe và chỉ định --go trong các scripts mở app. Lockfile seed từ nhánh FitMeal rồi npm install --package-lock-only --ignore-scripts; manifest/root-lock dependencies khớp hoàn toàn. npm ci --ignore-scripts thành công (792 packages).
+- Lint/typecheck/34 tests/diff check PASS trên Node26.7.0. Export iOS/Android PASS ra /private/tmp/fitness-fitmeal-merge-20261114. Đây là kiểm tra build và regression hiện có, chưa kiểm thử runtime bản ghép trên Simulator/thiết bị thật hoặc cloud. Warning module type có sẵn không làm fail.
+- Cập nhật nhánh nguồn để PR #4 hết conflict; không tự merge PR vào feature/fitmeal-integration.

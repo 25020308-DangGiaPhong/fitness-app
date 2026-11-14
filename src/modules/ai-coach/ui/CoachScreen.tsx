@@ -19,42 +19,57 @@ import { colors, radii, spacing, typography, useReducedMotion } from '@/ui';
 
 import { requestMobility } from '../client';
 import { MAX_CONCERN_LENGTH } from '../model';
-import { demoCandidates, findMobilityArea, MAX_HISTORY_TURNS, textBoundary, type CoachReply, type CoachStep, type MobilityRequest, type Posture } from '../mobility';
+import { demoCandidates, editTargets, findMobilityArea, MAX_HISTORY_TURNS, suggestedVolume, textBoundary, type CoachReply, type CoachStep, type ExerciseTarget, type MobilityArea, type MobilityRequest, type Posture } from '../mobility';
 
 export interface CoachScreenProps {
-  onOpenExerciseDetail: (exerciseId: string) => void;
+  onOpenExerciseDetail: (exerciseId: string, volume?: { sets: number; amount: number }) => void;
 }
 
 type Message =
   | { id: string; role: 'user'; content: string }
-  | { id: string; role: 'coach'; content: string; reply?: CoachReply; retry?: MobilityRequest };
+  | { id: string; role: 'coach'; content: string; reply?: CoachReply; targets?: ExerciseTarget[]; retry?: MobilityRequest };
 
 type Chat = { id: number; messages: Message[] };
 
 const welcome: Message = {
   id: 'welcome',
   role: 'coach',
-  content: 'What kind of movement would you like today? Try asking for a short stretch at your desk.',
+  content: 'How are you feeling today? We can make room for a lighter day, your usual pace, or a little more challenge.',
 };
 
 const replyText: Record<CoachStep, string> = {
   confirm: 'Are you looking for gentle movement, or is this about pain or a recent injury?',
   posture: 'Which position works for you?',
-  area_needed: 'Where do you feel tight or tired? For example, your hips, shoulders, or lower back.',
+  area_needed: 'Which area would you like to work on?',
+  back_area_needed: 'Is it your upper back or lower back that feels tired or tight?',
+  rest: 'It’s okay to stop or take a rest day. You don’t have to earn a break. No workout has been changed or started.',
   leg_area_needed: 'Which part of your leg feels tired or tight?',
   stop: 'I’ll pause exercise suggestions here. If you need help with pain or an injury, a healthcare professional can guide you.',
   clarify: 'What kind of movement would you like? For example, ask for seated knee mobility or a lower-back stretch.',
   no_match: 'There’s no exercise in the demo catalog that matches those preferences.',
   unavailable: 'AI chat is unavailable. You can still try the guided upper-body options below.',
-  suggest: 'Here’s a mobility exercise from Train.',
+  suggest: 'Here are some options from Train. Choose an exercise to review, or tell me how many sets and reps you’d like.',
 };
 
-type LegArea = 'hamstrings' | 'knees' | 'calves' | 'ankles';
-type QuickOption = 'gentle' | 'pain' | 'unsure' | 'retry' | Posture | LegArea;
+type QuickOption = 'gentle' | 'pain' | 'unsure' | 'retry' | Posture | MobilityArea | 'legs' | 'light' | 'usual' | 'energized' | 'rest';
 const quickOptions: Record<QuickOption, string> = {
+  neck: 'Neck',
+  shoulders: 'Shoulders',
+  wrists: 'Wrists',
+  chest: 'Chest',
+  core: 'Core',
+  hips: 'Hips',
+  legs: 'Legs',
+  light: 'I feel tired or stressed today',
+  usual: 'I feel okay — my usual pace',
+  energized: 'I feel energized today',
+  rest: 'I want to rest today',
+  'upper back': 'Upper back',
+  'lower back': 'Lower back',
   gentle: 'Gentle movement',
   pain: 'Pain or recent injury',
   unsure: 'Not sure',
+  any: 'Any position',
   seated: 'Seated',
   standing: 'Standing',
   floor: 'On the floor',
@@ -64,7 +79,8 @@ const quickOptions: Record<QuickOption, string> = {
   calves: 'Calves',
   ankles: 'Ankles',
 };
-const postureOptions: Posture[] = ['seated', 'standing', 'floor'];
+const postureOptions: Posture[] = ['any', 'seated', 'standing', 'floor'];
+const areaOptions: MobilityArea[] = ['neck', 'shoulders', 'upper back', 'lower back', 'wrists', 'chest', 'core', 'hips', 'knees', 'hamstrings', 'calves', 'ankles'];
 
 export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
   const reduceMotion = useReducedMotion();
@@ -112,6 +128,13 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
     if (!content || sending.current) return;
     const previous = messages.at(-1);
     const previousReply = previous?.role === 'coach' ? previous.reply : undefined;
+    const lastSuggestion = [...messages].reverse().find((message) => message.role === 'coach' && message.targets?.length);
+    const previousTargets = lastSuggestion?.role === 'coach' ? lastSuggestion.targets ?? [] : [];
+    const userTexts = [...messages.filter((m) => m.role === 'user').map((m) => m.content), content];
+    const boundary = textBoundary(content, messages.map((m) => ({ role: m.role === 'coach' ? 'assistant' : 'user', content: m.content })));
+    const requestedArea = findMobilityArea(content);
+    const sameArea = !requestedArea || previousTargets.length > 0 && previousTargets.every(({ exerciseId }) => getExercise(exerciseId)?.mobility?.areas.includes(requestedArea));
+    const edit = !option && sameArea && boundary?.step !== 'stop' && boundary?.step !== 'rest' ? editTargets(content, previousTargets) : undefined;
     sending.current = true;
     scrollOnChange.current = true;
     setPending(true);
@@ -125,22 +148,39 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
     try {
       let reply: CoachReply;
       let offline = false;
-      if (option === 'retry' && previous?.role === 'coach' && previous.retry) {
+      if (boundary?.step === 'stop' || boundary?.step === 'rest') {
+        reply = boundary;
+      } else if (edit) {
+        reply = edit.targets ? { step: 'suggest', exerciseIds: edit.targets.map(({ exerciseId }) => exerciseId), message: edit.message }
+          : { step: previousTargets.length ? 'clarify' : 'area_needed', message: edit.message };
+      } else if (option === 'retry' && previous?.role === 'coach' && previous.retry) {
         requestForRetry = previous.retry;
         ({ reply, offline } = await requestMobility(previous.retry));
       } else if (option === 'gentle') {
         reply = { step: 'posture', area: previousReply?.step === 'confirm' ? previousReply.area : 'shoulders' };
       } else if (option === 'pain' || option === 'unsure') {
         reply = { step: 'stop' };
-      } else if (option === 'hamstrings' || option === 'knees' || option === 'calves' || option === 'ankles') {
-        reply = { step: 'confirm', area: option };
-      } else {
-        const area = !option && (previousReply?.step === 'area_needed' || previousReply?.step === 'leg_area_needed')
-          ? findMobilityArea(content) : undefined;
-        if (area) {
-          reply = textBoundary(content) ?? { step: 'confirm', area };
+      } else if (option === 'legs') {
+        reply = { step: 'leg_area_needed', message: 'Which part of your legs would you like to work on?' };
+      } else if (option && areaOptions.some((area) => area === option)) {
+        const area = findMobilityArea(quickOptions[option]);
+        if (area && previousReply?.step === 'area_needed') {
+          requestForRetry = { posture: 'any', area };
+          ({ reply, offline } = await requestMobility(requestForRetry));
         } else {
-          const request: MobilityRequest = option && option !== 'retry' && previousReply?.step === 'posture'
+          reply = area ? { step: 'confirm', area } : { step: 'area_needed' };
+        }
+      } else {
+        const area = !option && (previousReply?.step === 'area_needed' || previousReply?.step === 'leg_area_needed' || previousReply?.step === 'back_area_needed')
+          ? findMobilityArea(content) : undefined;
+        if (area && content.toLowerCase() === quickOptions[area].toLowerCase()) {
+          if (boundary) reply = boundary;
+          else {
+            requestForRetry = { posture: 'any', area };
+            ({ reply, offline } = await requestMobility(requestForRetry));
+          }
+        } else {
+          const request: MobilityRequest = (option === 'seated' || option === 'standing' || option === 'floor' || option === 'any') && previousReply?.step === 'posture'
             ? { posture: option, area: previousReply.area }
             : {
               text: content,
@@ -154,9 +194,13 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
         }
       }
       const message = offline && reply.step === 'suggest'
-        ? 'AI chat is unavailable. Here’s a mobility option selected on this device.'
+        ? 'AI chat is unavailable. These mobility options were selected on this device.'
         : reply.message ?? replyText[reply.step];
+      const targets = reply.step === 'suggest' ? edit?.targets ?? reply.exerciseIds.map((exerciseId) => ({
+        exerciseId, ...suggestedVolume(exerciseId, userTexts),
+      })) : undefined;
       append({ id: `${requestId}-reply`, role: 'coach', content: message, reply,
+        targets,
         retry: reply.step === 'unavailable' ? requestForRetry : undefined });
     } finally {
       sending.current = false;
@@ -167,10 +211,15 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
   function renderMessage({ item }: { item: Message }) {
     const isUser = item.role === 'user';
     const reply = item.role === 'coach' && item.id === messages.at(-1)?.id ? item.reply : undefined;
-    const exercise = reply?.step === 'suggest' ? getExercise(reply.exerciseId) : undefined;
-    const options: QuickOption[] = reply?.step === 'unavailable'
+    const currentSuggestion = [...messages].reverse().find((m) => m.role === 'coach' && m.targets?.length);
+    const lastReply = messages.at(-1);
+    const stopped = lastReply?.role === 'coach' && (lastReply.reply?.step === 'stop' || lastReply.reply?.step === 'rest');
+    const targets = item.role === 'coach' && item.id === currentSuggestion?.id && !stopped ? item.targets ?? [] : [];
+    const options: QuickOption[] = item.id === 'welcome' && messages.length === 0 ? ['light', 'usual', 'energized', 'rest'] : reply?.step === 'unavailable'
       ? ['retry']
       : reply?.step === 'confirm' ? ['gentle', 'pain', 'unsure']
+      : reply?.step === 'back_area_needed' ? ['upper back', 'lower back']
+      : reply?.step === 'area_needed' ? ['neck', 'shoulders', 'upper back', 'lower back', 'chest', 'core', 'hips', 'legs', 'wrists']
       : reply?.step === 'leg_area_needed'
         ? ['hamstrings', 'knees', 'calves', 'ankles']
         : reply?.step === 'posture'
@@ -193,12 +242,16 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
               <Text style={styles.accentLabel}>{quickOptions[option]}</Text>
             </Pressable>
           ))}
-          {exercise && (
+          {targets.map((volume) => {
+            const exercise = getExercise(volume.exerciseId);
+            if (!exercise) return null;
+            return (
               <Pressable
                 key={exercise.id}
                 accessibilityRole="button"
                 accessibilityLabel={`View ${exercise.name}`}
-                onPress={() => onOpenExerciseDetail(exercise.id)}
+                accessibilityHint={`${volume.sets} sets, ${exercise.reps.replace(/^\d+/, String(volume.amount))} per set. Opens exercise details.`}
+                onPress={() => onOpenExerciseDetail(exercise.id, volume)}
                 style={({ pressed }) => [styles.exercise, pressed && styles.pressed]}
               >
                 <View style={styles.duration}>
@@ -207,10 +260,13 @@ export function CoachScreen({ onOpenExerciseDetail }: CoachScreenProps) {
                 <View style={styles.grow}>
                   <Text style={styles.exerciseTitle}>{exercise.name}</Text>
                   <Text style={styles.caption}>{exercise.focus}</Text>
+                  {exercise.mobility && <Text style={styles.caption}>{exercise.mobility.postures.join(' / ')} · {exercise.mobility.equipment === 'none' ? 'No equipment' : exercise.mobility.equipment}</Text>}
+                  <Text style={styles.caption}>{volume.sets} {volume.sets === 1 ? 'set' : 'sets'} · {exercise.reps.replace(/^\d+/, String(volume.amount))} per set · Adjustable</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
               </Pressable>
-          )}
+            );
+          })}
         </View>
       </View>
     );

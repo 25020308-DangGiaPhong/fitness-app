@@ -65,7 +65,7 @@ type Props = {
 };
 
 export function SessionScreen({ id, onProgress, onTrain }: Props) {
-  const { snapshot, command } = useSessions();
+  const { snapshot, command, adjust } = useSessions();
 
   const session = snapshot.sessions.find((item) => item.id === id);
 
@@ -100,6 +100,13 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
     }
   };
 
+  const changeVolume = async (sets: number, amount: number) => {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setError(null);
+    try { await adjust(id, sets, amount); }
+    catch { setError('Could not save that change. Please try again.'); }
+    finally { lock.current = false; setBusy(false); }
+  };
   if (!session) {
     return (
       <Screen hasNavigationHeader>
@@ -148,7 +155,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
           </AppText>
 
           <AppText variant="screenTitle" style={styles.center}>
-            You showed up.
+            {session.endedEarly ? 'You listened to your body.' : 'You showed up.'}
           </AppText>
 
           <AppText tone="secondary" style={styles.center}>
@@ -203,7 +210,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
       </AppText>
 
       <AppText tone="secondary">
-        {exercise.focus} · {exercise.reps} per set
+        {exercise.focus} · {exercise.reps.replace(/^\d+/, String(session.targetAmount ?? Number.parseInt(exercise.reps, 10)))} per set
       </AppText>
 
       {/* EXERCISE ANIMATION */}
@@ -275,7 +282,7 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
               ? 'Your session and rest timer are paused. Resume whenever you are ready.'
               : resting > 0
                 ? `Rest for ${Math.ceil(resting / 1000)} seconds. Find your breath before your next set.`
-                : `Complete ${exercise.reps} at a comfortable pace, then mark your set below.`}
+                : `Complete ${exercise.reps.replace(/^\d+/, String(session.targetAmount ?? Number.parseInt(exercise.reps, 10)))} at a comfortable pace, then mark your set below.`}
         </AppText>
 
         {resting > 0 && (
@@ -313,6 +320,17 @@ export function SessionScreen({ id, onProgress, onTrain }: Props) {
         )}
       </View>
 
+      {!allDone && <View style={{ gap: 8, marginVertical: 16 }}>
+        <AppText variant="heading">Adjust your pace</AppText>
+        <AppText tone="secondary">A lighter session or stopping early is okay. Only sets you marked complete are saved.</AppText>
+        <Button label="Fewer remaining sets" disabled={busy || session.totalSets <= Math.max(1, session.setsDone)} onPress={() => void changeVolume(session.totalSets - 1, session.targetAmount ?? Number.parseInt(exercise.reps, 10))} />
+        <Button label="More sets" disabled={busy || session.totalSets >= 5} onPress={() => void changeVolume(session.totalSets + 1, session.targetAmount ?? Number.parseInt(exercise.reps, 10))} />
+        <Button label="Less per remaining set" disabled={busy || (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) <= 1} onPress={() => void changeVolume(session.totalSets, (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) - 1)} />
+        <Button label="More per remaining set" disabled={busy || (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) >= 60} onPress={() => void changeVolume(session.totalSets, (session.targetAmount ?? Number.parseInt(exercise.reps, 10)) + 1)} />
+        <Button label="Finish early" disabled={busy} onPress={() => Alert.alert('Finish for today?', 'Save only completed sets. With no completed sets, this session is cancelled.', [
+          { text: 'Keep training', style: 'cancel' }, { text: 'Finish for today', onPress: () => void act('finish-early') },
+        ])} />
+      </View>}
       {/* PAUSE / RESUME */}
       <Button
         label={paused ? 'Resume session' : 'Pause session'}

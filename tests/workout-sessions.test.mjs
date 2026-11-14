@@ -103,3 +103,45 @@ test('pause before first set preserves configured rest; later rest periods retai
   state = changeSession(state, 'session-1', 'set', 40000);
   assert.equal(restRemaining(state.sessions[0], 40000), 30000);
 });
+
+test('Custom volume persists, validates input and never changes an existing session on reentry', () => {
+  const custom = startSession(emptySnapshot, 'bodyweight-squat', 1, 30000, 'custom', 1000, 5);
+  assert.equal(parseSnapshot(JSON.parse(JSON.stringify(custom))).sessions[0].targetAmount, 5);
+  assert.equal(startSession(custom, 'bodyweight-squat', 3, 30000, 'other', 2000, 15), custom);
+  assert.throws(() => startSession(emptySnapshot, 'bodyweight-squat', 0, 30000, 'bad', 1000, 5));
+  assert.throws(() => parseSnapshot({ ...custom, sessions: [{ ...custom.sessions[0], targetAmount: NaN }] }));
+});
+
+test('Volume edits serialize with completed sets; finish early preserves actual work', async () => {
+  const { adjustVolume } = await import('../src/modules/workout-sessions/model.ts');
+  const first = changeSession(initial(), 'session-1', 'set', 2000);
+  const lighter = adjustVolume(first, 'session-1', 1, 4);
+  assert.equal(lighter.sessions[0].setsDone, 1);
+  assert.equal(lighter.sessions[0].targetAmount, 4);
+  assert.equal(restRemaining(lighter.sessions[0], 2000), 0);
+  const finished = changeSession(first, 'session-1', 'finish-early', 3000);
+  assert.equal(finished.sessions[0].setsDone, 1);
+  assert.equal(finished.sessions[0].totalSets, 2);
+  assert.equal(finished.sessions[0].endedEarly, true);
+  assert.equal(parseSnapshot(JSON.parse(JSON.stringify(finished))).activeId, null);
+  assert.equal(adjustVolume(finished, 'session-1', 3, 10), finished);
+  assert.equal(changeSession(finished, 'session-1', 'finish-early', 4000), finished);
+  assert.equal(changeSession(initial(), 'session-1', 'finish-early', 2000).sessions[0].status, 'cancelled');
+});
+
+test('Queued edits cannot erase a completed set; failed edits leave the published plan intact', async () => {
+  const { adjustVolume } = await import('../src/modules/workout-sessions/model.ts');
+  let snapshot = initial();
+  let fail = false;
+  const write = createSessionWriter(() => snapshot, async () => { if (fail) throw new Error('disk full'); }, (next) => { snapshot = next; });
+  await write((previous) => changeSession(previous, 'session-1', 'set', 2000));
+  const second = write((previous) => changeSession(previous, 'session-1', 'skip-rest', 3000));
+  const third = write((previous) => changeSession(previous, 'session-1', 'set', 4000));
+  const edit = write((previous) => adjustVolume(previous, 'session-1', 1, 4));
+  const rejected = assert.rejects(edit, /Completed sets/);
+  await Promise.all([second, third, rejected]);
+  assert.equal(snapshot.sessions[0].setsDone, 2);
+  fail = true;
+  await assert.rejects(write((previous) => adjustVolume(previous, 'session-1', 3, 4)), /disk full/);
+  assert.equal(snapshot.sessions[0].totalSets, 2);
+});
