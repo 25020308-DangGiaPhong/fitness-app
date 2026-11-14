@@ -7,7 +7,7 @@ export default function AiCoachRoute() {
   const router = useRouter();
 
   const handleOpenExerciseDetail = useCallback(
-    (exerciseId: string) => {
+    (exerciseId: string, volume?: { sets: number; amount: number }) => {
       const resolved = resolveCatalogExercise(exerciseId);
       if (!resolved.isAvailable) {
         return; // Không mở bài mặc định nếu ID không hợp lệ
@@ -15,7 +15,7 @@ export default function AiCoachRoute() {
 
       router.push({
         pathname: '/workout',
-        params: { exerciseId: resolved.exerciseId, from: 'coach' },
+        params: { exerciseId: resolved.exerciseId, from: 'coach', ...(volume ? { sets: String(volume.sets), amount: String(volume.amount) } : {}) },
       });
     },
     [router]

@@ -7,24 +7,10 @@ import { getExercise } from '@/modules/exercise-catalog';
 import { AppText, Button, Screen } from '@/ui';
 
 import { createSessionWriter } from './writer';
-import { changeSession, emptySnapshot, parseSnapshot, startSession, type Snapshot } from './model';
+import { adjustVolume, changeSession, emptySnapshot, parseSnapshot, startSession, validVolume, type Snapshot } from './model';
 export { elapsed, restRemaining, type Session } from './model';
 
-type SessionsContext = {
-  snapshot: Snapshot;
-  start: (exerciseId: string) => Promise<string>;
-  command: (
-    id: string,
-    action: 'set' | 'pause' | 'resume' | 'complete' | 'cancel' | 'skip-rest',
-  ) => Promise<void>;
-  updateAiData: (
-    id: string,
-    data: {
-      repsCompleted?: number;
-      formFeedback?: string[];
-    },
-  ) => Promise<void>;
-};
+type SessionsContext = { snapshot: Snapshot; adjust: (id: string, sets: number, amount: number) => Promise<void>; start: (exerciseId: string, volume?: { sets: number; amount: number; restSeconds?: number }) => Promise<string>; command: (id: string, action: 'set' | 'pause' | 'resume' | 'complete' | 'cancel' | 'skip-rest' | 'finish-early') => Promise<void> };
 const Context = createContext<SessionsContext | null>(null);
 export function SessionsProvider({ children }: PropsWithChildren) {
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
@@ -101,49 +87,24 @@ export function SessionsProvider({ children }: PropsWithChildren) {
     );
     return writer.current(update);
   };
-  const start = async (exerciseId: string) => {
+  const start = async (exerciseId: string, volume?: { sets: number; amount: number; restSeconds?: number }) => {
     let id = '';
     await commit((previous) => {
       if (previous.activeId) { id = previous.activeId; return previous; }
       const exercise = getExercise(exerciseId);
       if (!exercise) throw new Error('Exercise not found.');
+      if (volume && !validVolume(volume.sets, volume.amount)) throw new Error('Invalid workout volume');
+      const restSeconds = volume?.restSeconds ?? exercise.rest;
+      if (!Number.isInteger(restSeconds) || restSeconds < 0 || restSeconds > 180) throw new Error('Invalid rest duration');
       const now = Date.now(); id = `${now}-${Math.random().toString(36).slice(2)}`;
-      return startSession(previous, exerciseId, exercise.sets, exercise.rest * 1000, id, now);
+      return startSession(previous, exerciseId, volume?.sets ?? exercise.sets, restSeconds * 1000, id, now, volume?.amount);
     });
     return id;
   };
+  const adjust: SessionsContext['adjust'] = async (id, sets, amount) => { await commit((previous) => adjustVolume(previous, id, sets, amount)); };
   const command: SessionsContext['command'] = async (id, action) => { await commit((previous) => changeSession(previous, id, action, Date.now())); };
-  const updateAiData: SessionsContext['updateAiData'] = async (id, data) => {
-  await commit((previous) => ({
-    ...previous,
-    sessions: previous.sessions.map((session) => {
-      if (
-        session.id !== id ||
-        (session.status !== 'active' && session.status !== 'paused')
-      ) {
-        return session;
-      }
-
-      return {
-        ...session,
-        workoutMode: 'camera-ai',
-        ...(data.repsCompleted !== undefined
-          ? { repsCompleted: data.repsCompleted }
-          : {}),
-        ...(data.formFeedback !== undefined
-          ? { formFeedback: data.formFeedback }
-          : {}),
-      };
-    }),
-  }));
-};
   if (!ready) return <Screen><AppText variant="title">{error ? 'Unable to open saved workouts' : 'Getting your training ready…'}</AppText>{error && <><AppText>{error}</AppText><Button label="Try again" onPress={() => { void load(); }} /></>}</Screen>;
-  return (
-  <Context.Provider value={{ snapshot, start, command, updateAiData }}>
-    {children}
-  </Context.Provider>
-);
+  return <Context.Provider value={{ snapshot, start, command, adjust }}>{children}</Context.Provider>;
 }
 export function useSessions() { const value = useContext(Context); if (!value) throw new Error('SessionsProvider is required.'); return value; }
 export { SessionScreen } from './ui/SessionScreen';
-export { CameraSessionScreen } from './ui/CameraSessionScreen';

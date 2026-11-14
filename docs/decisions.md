@@ -1,5 +1,9 @@
 # Nhật ký quyết định
 
+## Gỡ camera AI — 2026-11-13
+
+Người dùng yêu cầu gỡ toàn bộ tích hợp camera AI và quay lại cách chạy trước khi pull camera, giữ macOS hiện tại. Khôi phục code/config/dependency liên quan về `44bbe14`, loại route và native camera; giữ GIF và tính năng khác. Trở lại Expo Go trên iOS/Android. Tài liệu camera/pose cũ là lịch sử đề xuất, không mô tả tính năng hiện có. Không nâng hệ điều hành, không gỡ công cụ dùng chung hoặc xóa dữ liệu Expo Go.
+
 Không coi đề xuất của agent là quyết định của người dùng. Context dự án chỉ lưu tại đây/docs, không dùng decision memory global của Chief of Staff.
 
 ## Đã xác nhận
@@ -61,3 +65,13 @@ Sau khi yêu cầu tài liệu tạo tab trước rồi mới tích hợp MedGem
 ## Mobility & Stretching Coach — demo nội bộ (2026-11-10)
 
 Người dùng duyệt một luồng demo hackathon dành cho người lớn với Groq GPT-OSS 20B qua Expo API route. Coach chọn bài mobility trong Train, có thể hỏi thêm bằng nút chọn và dừng gợi ý khi người dùng báo đau, chấn thương hoặc chưa chắc. Giữ key trên dev server, dùng câu mẫu, giữ chat trong RAM. Body Map và phát hành nằm ngoài lượt này.
+
+## Empathy Coach và lượng tập — 2026-11-13
+
+Người dùng duyệt sửa hỏi lưng trên/dưới; thêm check-in chủ động trong chat, lời đáp đồng cảm và bài kèm lượng tập có thể chỉnh. Chat giữa hiệp có thể để sau. Lượt này dùng catalog hiện có, chưa cần thêm bài; lượng tập theo quy tắc demo nhẹ/thường/năng động, giới hạn1–5 hiệp,1–60 đơn vị theo catalog. Người dùng xem/sửa trên Train trước khi áp dụng. Cho chỉnh tay trong phiên và kết thúc sớm có xác nhận, không tự hoàn thành hiệp chưa tập. Không suy đoán chu kỳ, không chẩn đoán, không dùng hưng phấn làm chỉ định tập tối đa. Nhánh đau/chấn thương ưu tiên dừng.
+
+## AI Coach: chat chỉnh lượng tập và bộ cuộn số — 2026-11-14
+
+Theo yêu cầu người dùng: chọn cảm nhận chỉ hỏi vùng muốn tập; sau vùng hiển thị danh sách bài phù hợp. Chat chỉnh mục tiêu sets/amount cho cả danh sách hoặc bài được gọi tên. Mục tiêu trên thẻ và truyền sang Train dùng cùng giá trị; yêu cầu số cụ thể ưu tiên hơn mặc định theo cảm nhận.
+
+Chạm các ô set, lượng mỗi hiệp và rest ở đầu màn Workout để mở wheel picker có Cancel/Done; bỏ bốn nút tăng/giảm cuối màn. Giữ giới hạn hiện có 1–5 sets, 1–60 mỗi hiệp; rest 0–180 giây, bước 5 giây. Coach giữ gợi ý trong RAM; workout-sessions tiếp tục sở hữu phiên đã Start. Không thêm multi-exercise session, chat giữa hiệp, dependency hoặc đánh giá thể lực từ hồ sơ.
